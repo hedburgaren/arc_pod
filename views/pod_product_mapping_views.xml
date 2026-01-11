@@ -95,7 +95,7 @@
     <!-- Menu Item for Product Mappings -->
     <menuitem id="menu_pod_product_mapping"
               name="Product Mappings"
-              parent="base.menu_administration"
+              parent="menu_arc_pod_config"
               action="action_pod_product_mapping"
-              sequence="30"/>
+              sequence="20"/>
 </odoo>
