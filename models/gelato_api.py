@@ -55,3 +55,49 @@ class GelatoAPI(PodAPIClient):
         else:
             _logger.error("Gelato connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}
+
+    def get_products(self):
+        """
+        Get products from Gelato product catalog.
+        Calls GET /v1/products endpoint.
+
+        Returns:
+            list: List of product dictionaries with structure:
+                [{'id': '...', 'name': '...', 'sku': '...', 'variants': [...]}]
+        """
+        _logger.info("Fetching products from Gelato")
+
+        # Set longer timeout for catalog requests
+        original_timeout = self.timeout
+        self.timeout = 60
+
+        try:
+            success, response_data, status_code, error_message = self._make_request(
+                endpoint='products',
+                method='GET'
+            )
+
+            if success and response_data:
+                # Parse Gelato response
+                products = []
+                product_list = response_data.get('products', []) if isinstance(response_data, dict) else response_data
+
+                for item in product_list:
+                    product = {
+                        'id': str(item.get('uid', item.get('id', ''))),
+                        'name': item.get('name', item.get('title', '')),
+                        'sku': item.get('sku', ''),
+                        'variants': item.get('variants', []),
+                        'description': item.get('description', ''),
+                        'thumbnail_url': item.get('previewUrl', item.get('image', '')),
+                    }
+                    products.append(product)
+
+                _logger.info("Successfully fetched %d products from Gelato", len(products))
+                return products
+            else:
+                _logger.error("Failed to fetch products from Gelato: %s", error_message)
+                return []
+        finally:
+            # Restore original timeout
+            self.timeout = original_timeout

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- POD Product Mapping Tree View -->
+    <record id="view_pod_product_mapping_tree" model="ir.ui.view">
+        <field name="name">pod.product.mapping.tree</field>
+        <field name="model">pod.product.mapping</field>
+        <field name="arch" type="xml">
+            <tree string="Product Mappings">
+                <field name="odoo_product_id"/>
+                <field name="provider_id"/>
+                <field name="pod_product_name"/>
+                <field name="pod_sku"/>
+                <field name="last_sync"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- POD Product Mapping Form View -->
+    <record id="view_pod_product_mapping_form" model="ir.ui.view">
+        <field name="name">pod.product.mapping.form</field>
+        <field name="model">pod.product.mapping</field>
+        <field name="arch" type="xml">
+            <form string="Product Mapping">
+                <header>
+                    <button name="action_sync_from_provider" 
+                            string="Refresh from Provider" 
+                            type="object" 
+                            class="btn-primary"
+                            icon="fa-refresh"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Odoo Product">
+                            <field name="odoo_product_id" options="{'no_create': True}"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group string="POD Provider">
+                            <field name="provider_id" options="{'no_create': True}"/>
+                            <field name="pod_product_id"/>
+                            <field name="pod_product_name" readonly="1"/>
+                            <field name="pod_sku" readonly="1"/>
+                            <field name="pod_variant_id"/>
+                        </group>
+                    </group>
+                    <group string="Sync Information">
+                        <field name="last_sync" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- POD Product Mapping Search View -->
+    <record id="view_pod_product_mapping_search" model="ir.ui.view">
+        <field name="name">pod.product.mapping.search</field>
+        <field name="model">pod.product.mapping</field>
+        <field name="arch" type="xml">
+            <search string="Product Mappings">
+                <field name="odoo_product_id"/>
+                <field name="provider_id"/>
+                <field name="pod_product_name"/>
+                <field name="pod_sku"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Provider" name="group_by_provider" context="{'group_by': 'provider_id'}"/>
+                    <filter string="Odoo Product" name="group_by_product" context="{'group_by': 'odoo_product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action for Product Mappings -->
+    <record id="action_pod_product_mapping" model="ir.actions.act_window">
+        <field name="name">Product Mappings</field>
+        <field name="res_model">pod.product.mapping</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first product mapping
+            </p>
+            <p>
+                Map Odoo products to print-on-demand provider products to enable order synchronization.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item for Product Mappings -->
+    <menuitem id="menu_pod_product_mapping"
+              name="Product Mappings"
+              parent="base.menu_administration"
+              action="action_pod_product_mapping"
+              sequence="30"/>
+</odoo>

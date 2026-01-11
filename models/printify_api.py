@@ -55,3 +55,56 @@ class PrintifyAPI(PodAPIClient):
         else:
             _logger.error("Printify connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}
+
+    def get_products(self, shop_id=None):
+        """
+        Get products from Printify.
+        Calls GET /v1/shops/{shop_id}/products.json endpoint.
+
+        Args:
+            shop_id (str): Shop ID (required for Printify)
+
+        Returns:
+            list: List of product dictionaries with structure:
+                [{'id': '...', 'name': '...', 'sku': '...', 'variants': [...]}]
+        """
+        if not shop_id:
+            _logger.error("Shop ID is required for Printify get_products")
+            return []
+
+        _logger.info("Fetching products from Printify shop %s", shop_id)
+
+        # Set longer timeout for catalog requests
+        original_timeout = self.timeout
+        self.timeout = 60
+
+        try:
+            success, response_data, status_code, error_message = self._make_request(
+                endpoint=f'shops/{shop_id}/products.json',
+                method='GET'
+            )
+
+            if success and response_data:
+                # Parse Printify response
+                products = []
+                product_list = response_data.get('data', []) if isinstance(response_data, dict) else response_data
+
+                for item in product_list:
+                    product = {
+                        'id': str(item.get('id', '')),
+                        'name': item.get('title', ''),
+                        'sku': '',  # Printify doesn't have a single SKU, it's per variant
+                        'variants': item.get('variants', []),
+                        'description': item.get('description', ''),
+                        'thumbnail_url': item.get('images', [{}])[0].get('src', '') if item.get('images') else '',
+                    }
+                    products.append(product)
+
+                _logger.info("Successfully fetched %d products from Printify", len(products))
+                return products
+            else:
+                _logger.error("Failed to fetch products from Printify: %s", error_message)
+                return []
+        finally:
+            # Restore original timeout
+            self.timeout = original_timeout

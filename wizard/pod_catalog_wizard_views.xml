@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- POD Catalog Wizard Form View -->
+    <record id="view_pod_catalog_wizard_form" model="ir.ui.view">
+        <field name="name">pod.catalog.wizard.form</field>
+        <field name="model">pod.catalog.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Add POD Product Mapping">
+                <group>
+                    <group>
+                        <field name="odoo_product_id" readonly="1"/>
+                        <field name="provider_id" options="{'no_create': True}"/>
+                    </group>
+                    <group>
+                        <field name="catalog_loaded" invisible="1"/>
+                    </group>
+                </group>
+                <group>
+                    <button name="action_fetch_catalog" 
+                            string="Fetch Products" 
+                            type="object" 
+                            class="btn-primary"
+                            icon="fa-refresh"/>
+                </group>
+                <notebook invisible="not catalog_loaded">
+                    <page string="Available Products">
+                        <field name="catalog_ids" nolabel="1">
+                            <tree string="Products" 
+                                  editable="bottom" 
+                                  decoration-info="id == parent.selected_catalog_id">
+                                <field name="product_id" readonly="1"/>
+                                <field name="name" readonly="1"/>
+                                <field name="sku" readonly="1"/>
+                                <field name="description" readonly="1"/>
+                                <button name="%(action_select_catalog_product)d" 
+                                        string="Select" 
+                                        type="action" 
+                                        icon="fa-check"
+                                        context="{'catalog_id': id, 'wizard_id': parent.id}"/>
+                            </tree>
+                        </field>
+                    </page>
+                </notebook>
+                <group invisible="not catalog_loaded">
+                    <field name="selected_catalog_id" 
+                           domain="[('wizard_id', '=', id)]"
+                           options="{'no_create': True}"/>
+                </group>
+                <footer>
+                    <button name="action_create_mapping" 
+                            string="Create Mapping" 
+                            type="object" 
+                            class="btn-primary"
+                            invisible="not selected_catalog_id"/>
+                    <button string="Cancel" 
+                            class="btn-secondary" 
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action to open POD Catalog Wizard -->
+    <record id="action_pod_catalog_wizard" model="ir.actions.act_window">
+        <field name="name">Add POD Product Mapping</field>
+        <field name="res_model">pod.catalog.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+    </record>
+
+    <!-- Simplified action for selecting catalog product -->
+    <record id="action_select_catalog_product" model="ir.actions.server">
+        <field name="name">Select Product</field>
+        <field name="model_id" ref="model_pod_product_catalog"/>
+        <field name="state">code</field>
+        <field name="code">
+wizard_id = context.get('wizard_id')
+catalog_id = context.get('catalog_id')
+if wizard_id and catalog_id:
+    wizard = env['pod.catalog.wizard'].browse(wizard_id)
+    catalog = env['pod.product.catalog'].browse(catalog_id)
+    wizard.write({'selected_catalog_id': catalog_id})
+        </field>
+    </record>
+</odoo>

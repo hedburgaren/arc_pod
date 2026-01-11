@@ -4,3 +4,6 @@
 from . import pod_provider
 from . import pod_config
 from . import pod_error_log
+from . import pod_product_mapping
+from . import pod_product_catalog
+from . import product_template
