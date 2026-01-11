@@ -11,15 +11,17 @@ _logger = logging.getLogger(__name__)
 class PrintifyAPI(PodAPIClient):
     """API client for Printify integration."""
 
-    def __init__(self, api_key, base_url='https://api.printify.com/v1/'):
+    def __init__(self, api_key, shop_id=None, base_url='https://api.printify.com/v1/'):
         """
         Initialize Printify API client.
 
         Args:
             api_key (str): Printify API key
+            shop_id (str): Printify shop ID
             base_url (str): Base URL for Printify API
         """
         super().__init__(api_key=api_key, base_url=base_url)
+        self.shop_id = shop_id
 
     def _get_headers(self):
         """
@@ -56,55 +58,71 @@ class PrintifyAPI(PodAPIClient):
             _logger.error("Printify connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}
 
-    def get_products(self, shop_id=None):
+    def fetch_products(self):
         """
-        Get products from Printify.
+        Fetch products from Printify API.
         Calls GET /v1/shops/{shop_id}/products.json endpoint.
 
-        Args:
-            shop_id (str): Shop ID (required for Printify)
-
         Returns:
-            list: List of product dictionaries with structure:
-                [{'id': '...', 'name': '...', 'sku': '...', 'variants': [...]}]
+            dict: Standardized product data with format:
+                {
+                    'products': [
+                        {
+                            'external_id': 'product_id',
+                            'name': 'Product Name',
+                            'description': 'Description',
+                            'variants': [
+                                {
+                                    'external_id': 'variant_id',
+                                    'sku': 'SKU123',
+                                    'size': 'M',
+                                    'color': 'Blue',
+                                    'price': 25.99
+                                }
+                            ]
+                        }
+                    ]
+                }
         """
+        _logger.info("Fetching products from Printify API")
+
+        # Get shop_id from the base_url or API key context
+        # For now, we'll need to extract it from initialization
+        shop_id = getattr(self, 'shop_id', None)
         if not shop_id:
-            _logger.error("Shop ID is required for Printify get_products")
-            return []
+            _logger.error("Shop ID not provided for Printify API")
+            return {'products': []}
 
-        _logger.info("Fetching products from Printify shop %s", shop_id)
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint=f'shops/{shop_id}/products.json',
+            method='GET'
+        )
 
-        # Set longer timeout for catalog requests
-        original_timeout = self.timeout
-        self.timeout = 60
+        if not success:
+            _logger.error("Failed to fetch Printify products: %s", error_message)
+            return {'products': []}
 
-        try:
-            success, response_data, status_code, error_message = self._make_request(
-                endpoint=f'shops/{shop_id}/products.json',
-                method='GET'
-            )
+        # Parse Printify response to standardized format
+        products = []
+        for item in response_data.get('data', []):
+            product = {
+                'external_id': str(item.get('id', '')),
+                'name': item.get('title', ''),
+                'description': item.get('description', ''),
+                'variants': []
+            }
 
-            if success and response_data:
-                # Parse Printify response
-                products = []
-                product_list = response_data.get('data', []) if isinstance(response_data, dict) else response_data
+            # Parse variants
+            for variant in item.get('variants', []):
+                product['variants'].append({
+                    'external_id': str(variant.get('id', '')),
+                    'sku': variant.get('sku', ''),
+                    'size': '',  # Printify doesn't have standard size field
+                    'color': '',  # Printify doesn't have standard color field
+                    'price': float(variant.get('price', 0)) / 100,  # Printify uses cents
+                })
 
-                for item in product_list:
-                    product = {
-                        'id': str(item.get('id', '')),
-                        'name': item.get('title', ''),
-                        'sku': '',  # Printify doesn't have a single SKU, it's per variant
-                        'variants': item.get('variants', []),
-                        'description': item.get('description', ''),
-                        'thumbnail_url': item.get('images', [{}])[0].get('src', '') if item.get('images') else '',
-                    }
-                    products.append(product)
+            products.append(product)
 
-                _logger.info("Successfully fetched %d products from Printify", len(products))
-                return products
-            else:
-                _logger.error("Failed to fetch products from Printify: %s", error_message)
-                return []
-        finally:
-            # Restore original timeout
-            self.timeout = original_timeout
+        _logger.info("Fetched %s products from Printify", len(products))
+        return {'products': products}

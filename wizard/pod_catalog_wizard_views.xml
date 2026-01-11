@@ -1,64 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- POD Catalog Wizard Form View -->
+    <!-- Catalog Wizard Form View -->
     <record id="view_pod_catalog_wizard_form" model="ir.ui.view">
         <field name="name">pod.catalog.wizard.form</field>
         <field name="model">pod.catalog.wizard</field>
         <field name="arch" type="xml">
-            <form string="Add POD Product Mapping">
-                <group>
+            <form string="Add POD Mapping">
+                <sheet>
                     <group>
-                        <field name="odoo_product_id" readonly="1"/>
-                        <field name="provider_id" options="{'no_create': True}"/>
+                        <group>
+                            <field name="odoo_product_id" readonly="1"/>
+                            <field name="provider_id"/>
+                        </group>
                     </group>
                     <group>
-                        <field name="catalog_loaded" invisible="1"/>
-                    </group>
-                </group>
-                <group>
-                    <button name="action_fetch_catalog" 
+                        <button name="action_fetch_catalog" 
                             string="Fetch Products" 
                             type="object" 
-                            class="btn-primary"
-                            icon="fa-refresh"/>
-                </group>
-                <notebook invisible="not catalog_loaded">
-                    <page string="Available Products">
-                        <field name="catalog_ids" nolabel="1">
-                            <tree string="Products" 
-                                  create="false" 
-                                  edit="false" 
-                                  delete="false">
-                                <field name="product_id" readonly="1"/>
-                                <field name="name" readonly="1"/>
-                                <field name="sku" readonly="1"/>
-                                <field name="description" readonly="1"/>
-                            </tree>
-                        </field>
-                    </page>
-                </notebook>
-                <group invisible="not catalog_loaded">
-                    <field name="selected_catalog_id" 
-                           domain="[('wizard_id', '=', id)]"
-                           options="{'no_create': True}"/>
-                </group>
+                            class="btn-primary"/>
+                    </group>
+                    <group>
+                        <field name="selected_catalog_id" 
+                            string="Select Product"
+                            domain="[('provider_id', '=', provider_id)]"
+                            options="{'no_create': True, 'no_open': True}"/>
+                    </group>
+                    <notebook>
+                        <page string="Available Products">
+                            <field name="catalog_ids" mode="tree" readonly="1">
+                                <tree string="Products" create="false" delete="false" edit="false">
+                                    <field name="name"/>
+                                    <field name="sku"/>
+                                    <field name="description"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
                 <footer>
-                    <button name="action_create_mapping" 
-                            string="Create Mapping" 
-                            type="object" 
-                            class="btn-primary"
-                            invisible="not selected_catalog_id"/>
+                    <button string="Create Mapping" 
+                        name="action_create_mapping" 
+                        type="object" 
+                        class="btn-primary"/>
                     <button string="Cancel" 
-                            class="btn-secondary" 
-                            special="cancel"/>
+                        class="btn-secondary" 
+                        special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
 
-    <!-- Action to open POD Catalog Wizard -->
+    <!-- Catalog Tree View (embedded) -->
+    <record id="view_pod_product_catalog_tree" model="ir.ui.view">
+        <field name="name">pod.product.catalog.tree</field>
+        <field name="model">pod.product.catalog</field>
+        <field name="arch" type="xml">
+            <tree string="Products" create="false" delete="false">
+                <field name="name"/>
+                <field name="sku"/>
+                <field name="description"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Action for opening wizard -->
     <record id="action_pod_catalog_wizard" model="ir.actions.act_window">
-        <field name="name">Add POD Product Mapping</field>
+        <field name="name">Add POD Mapping</field>
         <field name="res_model">pod.catalog.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>

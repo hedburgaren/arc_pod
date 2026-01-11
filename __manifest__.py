@@ -20,7 +20,8 @@ Features:
 * Configure API connections to POD providers
 * Manage provider settings from Odoo
 * Test API connections
-* Map Odoo products to POD provider products
+* Map Odoo products to POD products
+* Browse and sync product catalogs
 
     """,
     'author': 'hedburgaren',
@@ -28,17 +29,21 @@ Features:
     'license': 'LGPL-3',
     'depends': [
         'base',
+        'product',
         'sale_management',
         'product',
     ],
     'data': [
         'security/ir.model.access.csv',
         'data/pod_provider_data.xml',
+        'wizard/pod_mapping_wizard_views.xml',
         'views/pod_provider_views.xml',
         'views/pod_config_views.xml',
         'views/pod_error_log_views.xml',
-        'wizard/pod_catalog_wizard_views.xml',
+        'views/pod_product_views.xml',
+        'views/pod_product_variant_views.xml',
         'views/pod_product_mapping_views.xml',
+        'views/product_product_views.xml',
         'views/product_template_views.xml',
     ],
     'installable': True,

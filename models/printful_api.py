@@ -56,49 +56,46 @@ class PrintfulAPI(PodAPIClient):
             _logger.error("Printful connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}
 
-    def get_products(self):
+    def fetch_products(self):
         """
-        Get products from Printful catalog.
+        Fetch products from Printful API.
         Calls GET /products endpoint.
 
         Returns:
-            list: List of product dictionaries with structure:
-                [{'id': '...', 'name': '...', 'sku': '...', 'variants': [...]}]
+            dict: Standardized product data
         """
-        _logger.info("Fetching products from Printful")
+        _logger.info("Fetching products from Printful API")
 
-        # Set longer timeout for catalog requests
-        original_timeout = self.timeout
-        self.timeout = 60
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint='products',
+            method='GET'
+        )
 
-        try:
-            success, response_data, status_code, error_message = self._make_request(
-                endpoint='products',
-                method='GET'
-            )
+        if not success:
+            _logger.error("Failed to fetch Printful products: %s", error_message)
+            return {'products': []}
 
-            if success and response_data:
-                # Parse Printful response
-                products = []
-                # Printful wraps data in a 'result' key
-                product_list = response_data.get('result', []) if isinstance(response_data, dict) else response_data
+        # Parse Printful response to standardized format
+        products = []
+        for item in response_data.get('result', []):
+            product = {
+                'external_id': str(item.get('id', '')),
+                'name': item.get('name', ''),
+                'description': item.get('description', ''),
+                'variants': []
+            }
 
-                for item in product_list:
-                    product = {
-                        'id': str(item.get('id', '')),
-                        'name': item.get('name', item.get('title', '')),
-                        'sku': item.get('sku', ''),
-                        'variants': item.get('variants', []),
-                        'description': item.get('description', ''),
-                        'thumbnail_url': item.get('image', item.get('thumbnail_url', '')),
-                    }
-                    products.append(product)
+            # Parse variants
+            for variant in item.get('variants', []):
+                product['variants'].append({
+                    'external_id': str(variant.get('id', '')),
+                    'sku': variant.get('sku', ''),
+                    'size': variant.get('size', ''),
+                    'color': variant.get('color', ''),
+                    'price': float(variant.get('price', 0)),
+                })
 
-                _logger.info("Successfully fetched %d products from Printful", len(products))
-                return products
-            else:
-                _logger.error("Failed to fetch products from Printful: %s", error_message)
-                return []
-        finally:
-            # Restore original timeout
-            self.timeout = original_timeout
+            products.append(product)
+
+        _logger.info("Fetched %s products from Printful", len(products))
+        return {'products': products}

@@ -19,6 +19,12 @@
         <field name="model">pod.provider</field>
         <field name="arch" type="xml">
             <form string="POD Provider">
+                <header>
+                    <button name="action_sync_products" 
+                        string="Sync Products" 
+                        type="object" 
+                        class="btn-primary"/>
+                </header>
                 <sheet>
                     <group>
                         <group>
@@ -29,6 +35,12 @@
                         <group>
                             <field name="active"/>
                             <field name="logo" widget="image"/>
+                        </group>
+                    </group>
+                    <group string="Product Sync Information">
+                        <group>
+                            <field name="last_product_sync" readonly="1"/>
+                            <field name="product_count" readonly="1"/>
                         </group>
                     </group>
                 </sheet>

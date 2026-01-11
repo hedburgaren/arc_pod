@@ -56,48 +56,46 @@ class GelatoAPI(PodAPIClient):
             _logger.error("Gelato connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}
 
-    def get_products(self):
+    def fetch_products(self):
         """
-        Get products from Gelato product catalog.
-        Calls GET /v1/products endpoint.
+        Fetch products from Gelato API.
+        Calls appropriate Gelato endpoint for product catalog.
 
         Returns:
-            list: List of product dictionaries with structure:
-                [{'id': '...', 'name': '...', 'sku': '...', 'variants': [...]}]
+            dict: Standardized product data
         """
-        _logger.info("Fetching products from Gelato")
+        _logger.info("Fetching products from Gelato API")
 
-        # Set longer timeout for catalog requests
-        original_timeout = self.timeout
-        self.timeout = 60
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint='products',
+            method='GET'
+        )
 
-        try:
-            success, response_data, status_code, error_message = self._make_request(
-                endpoint='products',
-                method='GET'
-            )
+        if not success:
+            _logger.error("Failed to fetch Gelato products: %s", error_message)
+            return {'products': []}
 
-            if success and response_data:
-                # Parse Gelato response
-                products = []
-                product_list = response_data.get('products', []) if isinstance(response_data, dict) else response_data
+        # Parse Gelato response to standardized format
+        products = []
+        for item in response_data.get('products', []):
+            product = {
+                'external_id': str(item.get('uid', '')),
+                'name': item.get('title', ''),
+                'description': item.get('description', ''),
+                'variants': []
+            }
 
-                for item in product_list:
-                    product = {
-                        'id': str(item.get('uid', item.get('id', ''))),
-                        'name': item.get('name', item.get('title', '')),
-                        'sku': item.get('sku', ''),
-                        'variants': item.get('variants', []),
-                        'description': item.get('description', ''),
-                        'thumbnail_url': item.get('previewUrl', item.get('image', '')),
-                    }
-                    products.append(product)
+            # Parse variants
+            for variant in item.get('variants', []):
+                product['variants'].append({
+                    'external_id': str(variant.get('uid', '')),
+                    'sku': variant.get('sku', ''),
+                    'size': variant.get('size', ''),
+                    'color': variant.get('color', ''),
+                    'price': float(variant.get('price', {}).get('amount', 0)),
+                })
 
-                _logger.info("Successfully fetched %d products from Gelato", len(products))
-                return products
-            else:
-                _logger.error("Failed to fetch products from Gelato: %s", error_message)
-                return []
-        finally:
-            # Restore original timeout
-            self.timeout = original_timeout
+            products.append(product)
+
+        _logger.info("Fetched %s products from Gelato", len(products))
+        return {'products': products}
