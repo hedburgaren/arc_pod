@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View (for embedding) -->
+    <record id="view_pod_product_variant_tree" model="ir.ui.view">
+        <field name="name">pod.product.variant.tree</field>
+        <field name="model">pod.product.variant</field>
+        <field name="arch" type="xml">
+            <tree string="POD Product Variants">
+                <field name="name"/>
+                <field name="sku"/>
+                <field name="size"/>
+                <field name="color"/>
+                <field name="price"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_pod_product_variant_form" model="ir.ui.view">
+        <field name="name">pod.product.variant.form</field>
+        <field name="model">pod.product.variant</field>
+        <field name="arch" type="xml">
+            <form string="POD Product Variant">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="product_id"/>
+                            <field name="external_id"/>
+                            <field name="sku"/>
+                        </group>
+                        <group>
+                            <field name="size"/>
+                            <field name="color"/>
+                            <field name="price"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action (optional, for searching) -->
+    <record id="action_pod_product_variant" model="ir.actions.act_window">
+        <field name="name">POD Product Variants</field>
+        <field name="res_model">pod.product.variant</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

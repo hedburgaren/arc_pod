@@ -21,7 +21,7 @@ class PodProductMapping(models.Model):
         store=True,
     )
     odoo_product_id = fields.Many2one(
-        comodel_name='product.template',
+        comodel_name='product.product',
         string='Odoo Product',
         required=True,
         ondelete='cascade',
@@ -32,24 +32,15 @@ class PodProductMapping(models.Model):
         required=True,
         ondelete='restrict',
     )
-    pod_product_id = fields.Char(
-        string='POD Product ID',
-        required=True,
-        help='External product ID from POD provider',
+    pod_product_id = fields.Many2one(
+        comodel_name='pod.product',
+        string='POD Product',
+        ondelete='restrict',
     )
-    pod_product_name = fields.Char(
-        string='POD Product Name',
-        readonly=True,
-        help='Product name from POD provider',
-    )
-    pod_variant_id = fields.Char(
-        string='POD Variant ID',
-        help='External variant ID if applicable',
-    )
-    pod_sku = fields.Char(
-        string='POD SKU',
-        readonly=True,
-        help='SKU from POD provider',
+    pod_variant_id = fields.Many2one(
+        comodel_name='pod.product.variant',
+        string='POD Variant',
+        ondelete='restrict',
     )
     active = fields.Boolean(
         string='Active',
@@ -69,12 +60,12 @@ class PodProductMapping(models.Model):
         ),
     ]
 
-    @api.depends('odoo_product_id', 'pod_product_name')
+    @api.depends('odoo_product_id', 'pod_product_id')
     def _compute_name(self):
         """Compute display name as 'Odoo Product → POD Product'."""
         for record in self:
             odoo_name = record.odoo_product_id.name if record.odoo_product_id else 'Unknown'
-            pod_name = record.pod_product_name or 'Unknown'
+            pod_name = record.pod_product_id.name if record.pod_product_id else 'Unknown'
             record.name = f"{odoo_name} → {pod_name}"
 
     def name_get(self):
@@ -82,70 +73,7 @@ class PodProductMapping(models.Model):
         result = []
         for record in self:
             odoo_name = record.odoo_product_id.name if record.odoo_product_id else _('Unknown')
-            pod_name = record.pod_product_name or _('Unknown')
+            pod_name = record.pod_product_id.name if record.pod_product_id else _('Unknown')
             name = f"{odoo_name} → {pod_name}"
             result.append((record.id, name))
         return result
-
-    def action_sync_from_provider(self):
-        """Refresh product data from POD provider API."""
-        self.ensure_one()
-        
-        # Get API configuration
-        IrConfigParameter = self.env['ir.config_parameter'].sudo()
-        api_key = IrConfigParameter.get_param('arc_pod.api_key', default='')
-        shop_id = IrConfigParameter.get_param('arc_pod.shop_id', default='')
-        
-        if not api_key:
-            raise UserError(_("API Key is not configured. Please configure it in Settings > ARC POD."))
-        
-        try:
-            # Get the appropriate API client based on provider
-            provider_code = self.provider_id.code
-            
-            if provider_code == 'printify':
-                from .printify_api import PrintifyAPI
-                if not shop_id:
-                    raise UserError(_("Shop ID is required for Printify. Please configure it in Settings > ARC POD."))
-                api_client = PrintifyAPI(api_key, shop_id)
-            elif provider_code == 'gelato':
-                from .gelato_api import GelatoAPI
-                api_client = GelatoAPI(api_key)
-            elif provider_code == 'printful':
-                from .printful_api import PrintfulAPI
-                api_client = PrintfulAPI(api_key)
-            else:
-                raise UserError(_("Unsupported provider: %s") % provider_code)
-            
-            # Fetch products and find the matching one
-            products = api_client.get_products()
-            matching_product = None
-            
-            for product in products:
-                if product['id'] == self.pod_product_id:
-                    matching_product = product
-                    break
-            
-            if matching_product:
-                # Update mapping with fresh data
-                self.write({
-                    'pod_product_name': matching_product['name'],
-                    'pod_sku': matching_product['sku'],
-                    'last_sync': fields.Datetime.now(),
-                })
-                
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': _('Product data refreshed successfully from %s') % self.provider_id.name,
-                        'type': 'success',
-                        'sticky': False,
-                    }
-                }
-            else:
-                raise UserError(_("Product %s not found in %s catalog") % (self.pod_product_id, self.provider_id.name))
-                
-        except Exception as e:
-            _logger.error(f"Error syncing product from provider: {str(e)}")
-            raise UserError(_("Failed to sync product: %s") % str(e))

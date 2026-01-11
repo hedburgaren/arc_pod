@@ -55,3 +55,47 @@ class PrintfulAPI(PodAPIClient):
         else:
             _logger.error("Printful connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}
+
+    def fetch_products(self):
+        """
+        Fetch products from Printful API.
+        Calls GET /products endpoint.
+
+        Returns:
+            dict: Standardized product data
+        """
+        _logger.info("Fetching products from Printful API")
+
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint='products',
+            method='GET'
+        )
+
+        if not success:
+            _logger.error("Failed to fetch Printful products: %s", error_message)
+            return {'products': []}
+
+        # Parse Printful response to standardized format
+        products = []
+        for item in response_data.get('result', []):
+            product = {
+                'external_id': str(item.get('id', '')),
+                'name': item.get('name', ''),
+                'description': item.get('description', ''),
+                'variants': []
+            }
+
+            # Parse variants
+            for variant in item.get('variants', []):
+                product['variants'].append({
+                    'external_id': str(variant.get('id', '')),
+                    'sku': variant.get('sku', ''),
+                    'size': variant.get('size', ''),
+                    'color': variant.get('color', ''),
+                    'price': float(variant.get('price', 0)),
+                })
+
+            products.append(product)
+
+        _logger.info("Fetched %s products from Printful", len(products))
+        return {'products': products}

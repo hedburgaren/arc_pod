@@ -55,3 +55,47 @@ class GelatoAPI(PodAPIClient):
         else:
             _logger.error("Gelato connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}
+
+    def fetch_products(self):
+        """
+        Fetch products from Gelato API.
+        Calls appropriate Gelato endpoint for product catalog.
+
+        Returns:
+            dict: Standardized product data
+        """
+        _logger.info("Fetching products from Gelato API")
+
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint='products',
+            method='GET'
+        )
+
+        if not success:
+            _logger.error("Failed to fetch Gelato products: %s", error_message)
+            return {'products': []}
+
+        # Parse Gelato response to standardized format
+        products = []
+        for item in response_data.get('products', []):
+            product = {
+                'external_id': str(item.get('uid', '')),
+                'name': item.get('title', ''),
+                'description': item.get('description', ''),
+                'variants': []
+            }
+
+            # Parse variants
+            for variant in item.get('variants', []):
+                product['variants'].append({
+                    'external_id': str(variant.get('uid', '')),
+                    'sku': variant.get('sku', ''),
+                    'size': variant.get('size', ''),
+                    'color': variant.get('color', ''),
+                    'price': float(variant.get('price', {}).get('amount', 0)),
+                })
+
+            products.append(product)
+
+        _logger.info("Fetched %s products from Gelato", len(products))
+        return {'products': products}
