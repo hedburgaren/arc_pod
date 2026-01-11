@@ -41,7 +41,7 @@ class PodAPIClient(ABC):
         url = f"{self.base_url}{endpoint}"
         headers = self._get_headers()
 
-        _logger.info(f"Making {method} request to {url}")
+        _logger.info("Making %s request to %s", method, url)
 
         try:
             response = requests.request(
@@ -52,7 +52,7 @@ class PodAPIClient(ABC):
                 timeout=self.timeout
             )
 
-            _logger.info(f"Response status: {response.status_code}")
+            _logger.info("Response status: %s", response.status_code)
 
             # Check if request was successful
             if response.status_code >= 200 and response.status_code < 300:
@@ -74,7 +74,7 @@ class PodAPIClient(ABC):
 
         except requests.exceptions.ConnectionError as e:
             error_message = _("Connection failed: Unable to reach the server")
-            _logger.error(f"{error_message}: {str(e)}")
+            _logger.error("%s: %s", error_message, str(e))
             return (False, None, None, error_message)
 
         except requests.exceptions.RequestException as e:

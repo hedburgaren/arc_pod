@@ -53,5 +53,5 @@ class GelatoAPI(PodAPIClient):
             _logger.info(message)
             return {'success': True, 'message': message}
         else:
-            _logger.error(f"Gelato connection test failed: {error_message}")
+            _logger.error("Gelato connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}

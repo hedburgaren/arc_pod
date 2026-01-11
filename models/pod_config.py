@@ -76,7 +76,7 @@ class PodConfig(models.TransientModel):
 
         provider_id = IrConfigParameter.get_param('arc_pod.selected_provider_id', default=False)
         last_test = IrConfigParameter.get_param('arc_pod.last_connection_test', default=False)
-        
+
         res.update(
             selected_provider_id=int(provider_id) if provider_id else False,
             api_key=IrConfigParameter.get_param('arc_pod.api_key', default=''),
@@ -156,7 +156,7 @@ class PodConfig(models.TransientModel):
                 raise ValueError(_('Unknown provider: %s') % provider_code)
 
             # Test the connection
-            _logger.info(f"Testing connection for provider: {provider_code}")
+            _logger.info("Testing connection for provider: %s", provider_code)
             result = api_client.test_connection()
 
             # Update connection status
@@ -191,7 +191,7 @@ class PodConfig(models.TransientModel):
 
         except Exception as e:
             error_message = _('Connection test failed: %s') % str(e)
-            _logger.error(error_message)
+            _logger.error(error_message, exc_info=True)
             
             self.write({
                 'connection_status': 'failed',

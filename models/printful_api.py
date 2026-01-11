@@ -53,5 +53,5 @@ class PrintfulAPI(PodAPIClient):
             _logger.info(message)
             return {'success': True, 'message': message}
         else:
-            _logger.error(f"Printful connection test failed: {error_message}")
+            _logger.error("Printful connection test failed: %s", error_message)
             return {'success': False, 'message': error_message}
