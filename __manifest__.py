@@ -31,6 +31,7 @@ Features:
         'base',
         'product',
         'sale_management',
+        'product',
     ],
     'data': [
         'security/ir.model.access.csv',
