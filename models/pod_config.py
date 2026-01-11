@@ -30,6 +30,10 @@ class PodConfig(models.TransientModel):
         string='API Secret',
         help='API secret (only for providers that require it)',
     )
+    shop_id = fields.Char(
+        string='Shop/Store ID',
+        help='Shop or Store ID (required for some providers like Printify)',
+    )
     connection_status = fields.Selection(
         selection=[
             ('not_tested', 'Not Tested'),
@@ -81,6 +85,7 @@ class PodConfig(models.TransientModel):
             selected_provider_id=int(provider_id) if provider_id else False,
             api_key=IrConfigParameter.get_param('arc_pod.api_key', default=''),
             api_secret=IrConfigParameter.get_param('arc_pod.api_secret', default=''),
+            shop_id=IrConfigParameter.get_param('arc_pod.shop_id', default=''),
             connection_status=IrConfigParameter.get_param('arc_pod.connection_status', default='not_tested'),
             connection_message=IrConfigParameter.get_param('arc_pod.connection_message', default=''),
             last_connection_test=last_test if last_test else False,
@@ -95,6 +100,7 @@ class PodConfig(models.TransientModel):
         IrConfigParameter.set_param('arc_pod.selected_provider_id', self.selected_provider_id.id or False)
         IrConfigParameter.set_param('arc_pod.api_key', self.api_key or '')
         IrConfigParameter.set_param('arc_pod.api_secret', self.api_secret or '')
+        IrConfigParameter.set_param('arc_pod.shop_id', self.shop_id or '')
         IrConfigParameter.set_param('arc_pod.connection_status', self.connection_status or 'not_tested')
         IrConfigParameter.set_param('arc_pod.connection_message', self.connection_message or '')
         IrConfigParameter.set_param('arc_pod.last_connection_test', self.last_connection_test or False)
