@@ -1,90 +1,57 @@
 # -*- coding: utf-8 -*-
 # License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0).
 
-import requests
 import logging
 from odoo import _
-from odoo.exceptions import UserError
+from .pod_api_client import PodAPIClient
 
 _logger = logging.getLogger(__name__)
 
 
-class GelatoAPI:
-    """API client for Gelato service."""
+class GelatoAPI(PodAPIClient):
+    """API client for Gelato integration."""
 
-    def __init__(self, api_key):
+    def __init__(self, api_key, base_url='https://api.gelato.com/v1/'):
         """
         Initialize Gelato API client.
 
         Args:
             api_key (str): Gelato API key
+            base_url (str): Base URL for Gelato API
         """
-        self.api_key = api_key
-        self.base_url = 'https://api.gelato.com/v1'
-        self.headers = {
-            'X-API-KEY': api_key,
+        super().__init__(api_key=api_key, base_url=base_url)
+
+    def _get_headers(self):
+        """
+        Get authentication headers for Gelato API.
+
+        Returns:
+            dict: Headers with X-API-KEY authentication
+        """
+        return {
+            'X-API-KEY': self.api_key,
             'Content-Type': 'application/json',
         }
-        self.timeout = 60
 
-    def _make_request(self, method, endpoint, **kwargs):
+    def test_connection(self):
         """
-        Make HTTP request to Gelato API.
-
-        Args:
-            method (str): HTTP method (GET, POST, etc.)
-            endpoint (str): API endpoint
-            **kwargs: Additional arguments for requests
+        Test connection to Gelato API.
+        Calls GET /v1/ping endpoint.
 
         Returns:
-            dict: Response data
-
-        Raises:
-            UserError: If request fails
+            dict: {'success': bool, 'message': str}
         """
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
-        kwargs.setdefault('timeout', self.timeout)
-        kwargs.setdefault('headers', self.headers)
+        _logger.info("Testing Gelato API connection")
 
-        try:
-            response = requests.request(method, url, **kwargs)
-            response.raise_for_status()
-            return response.json() if response.content else {}
-        except requests.exceptions.RequestException as e:
-            _logger.error(f"Gelato API error: {str(e)}")
-            raise UserError(_("Gelato API error: %s") % str(e))
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint='ping',
+            method='GET'
+        )
 
-    def get_products(self):
-        """
-        Fetch products from Gelato catalog.
-
-        Returns:
-            list: List of product dicts with keys: id, name, sku, variants
-
-        Raises:
-            UserError: If request fails
-        """
-        # Gelato uses /products endpoint for catalog
-        endpoint = '/products'
-        try:
-            response = self._make_request('GET', endpoint)
-            products = []
-            
-            # Parse Gelato response structure
-            data = response.get('products', []) if isinstance(response, dict) else response
-            
-            for product in data:
-                variants = product.get('variants', [])
-                products.append({
-                    'id': str(product.get('id', product.get('productUid', ''))),
-                    'name': product.get('title', product.get('name', 'Unknown Product')),
-                    'description': product.get('description', ''),
-                    'sku': product.get('sku', ''),
-                    'variants': variants,
-                })
-            
-            _logger.info(f"Fetched {len(products)} products from Gelato")
-            return products
-        except Exception as e:
-            _logger.error(f"Error fetching Gelato products: {str(e)}")
-            raise UserError(_("Failed to fetch products from Gelato: %s") % str(e))
+        if success:
+            message = _("Connection successful: Gelato API is accessible")
+            _logger.info(message)
+            return {'success': True, 'message': message}
+        else:
+            _logger.error("Gelato connection test failed: %s", error_message)
+            return {'success': False, 'message': error_message}

@@ -3,7 +3,7 @@
 
 {
     'name': 'ARC POD - Print on Demand Integration',
-    'version': '18.0.1.2.0',
+    'version': '18.0.1.1.0',
     'category': 'Sales',
     'summary': 'Connect to Printify, Gelato, and Printful',
     'description': """
@@ -37,9 +37,7 @@ Features:
         'data/pod_provider_data.xml',
         'views/pod_provider_views.xml',
         'views/pod_config_views.xml',
-        'views/pod_product_mapping_views.xml',
-        'views/product_template_views.xml',
-        'wizard/pod_catalog_wizard_views.xml',
+        'views/pod_error_log_views.xml',
     ],
     'installable': True,
     'application': True,
