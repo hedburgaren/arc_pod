@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_pod_provider_tree" model="ir.ui.view">
+        <field name="name">pod.provider.tree</field>
+        <field name="model">pod.provider</field>
+        <field name="arch" type="xml">
+            <tree string="POD Providers">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_pod_provider_form" model="ir.ui.view">
+        <field name="name">pod.provider.form</field>
+        <field name="model">pod.provider</field>
+        <field name="arch" type="xml">
+            <form string="POD Provider">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="api_url"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                            <field name="logo" widget="image"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_pod_provider" model="ir.actions.act_window">
+        <field name="name">POD Providers</field>
+        <field name="res_model">pod.provider</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first POD provider
+            </p>
+            <p>
+                Configure print-on-demand service providers to integrate with your Odoo instance.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_arc_pod_root"
+        name="ARC POD"
+        sequence="100"
+        web_icon="arc_pod,static/description/icon.png"/>
+
+    <menuitem id="menu_arc_pod_config"
+        name="Configuration"
+        parent="menu_arc_pod_root"
+        sequence="100"/>
+
+    <menuitem id="menu_pod_provider"
+        name="Providers"
+        parent="menu_arc_pod_config"
+        action="action_pod_provider"
+        sequence="10"/>
+</odoo>

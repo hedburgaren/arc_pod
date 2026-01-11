@@ -1,0 +1,163 @@
+# Translation template for arc_pod.
+# Copyright (C) 2026 hedburgaren
+# This file is distributed under the same license as the arc_pod package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: arc_pod 18.0.1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-11 17:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_provider__active
+msgid "Active"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_config__api_key
+msgid "API Key"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,help:arc_pod.field_pod_config__api_key
+msgid "API key for the selected provider"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_config__api_secret
+msgid "API Secret"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,help:arc_pod.field_pod_config__api_secret
+msgid "API secret (only for providers that require it)"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_provider__api_url
+msgid "API URL"
+msgstr ""
+
+#. module: arc_pod
+#: model_terms:ir.ui.view,arch_db:arc_pod.view_pod_config_settings
+msgid "ARC POD"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,help:arc_pod.field_pod_config__selected_provider_id
+msgid "Choose the print-on-demand service provider"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_config__connection_message
+msgid "Connection Message"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_config__connection_status
+msgid "Connection Status"
+msgstr ""
+
+#. module: arc_pod
+#: model:pod.config,connection_message:arc_pod.action_test_connection
+msgid "Connection test not implemented yet"
+msgstr ""
+
+#. module: arc_pod
+#: model_terms:ir.ui.view,arch_db:arc_pod.view_pod_provider_form
+msgid "Create your first POD provider"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_provider__logo
+msgid "Logo"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.ui.menu,name:arc_pod.menu_arc_pod_root
+msgid "ARC POD"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.actions.act_window,name:arc_pod.action_pod_provider
+#: model:ir.ui.menu,name:arc_pod.menu_pod_provider
+msgid "POD Providers"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model,name:arc_pod.model_pod_config
+msgid "POD Configuration Settings"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model,name:arc_pod.model_pod_provider
+msgid "Print on Demand Provider"
+msgstr ""
+
+#. module: arc_pod
+#: model_terms:ir.ui.view,arch_db:arc_pod.view_pod_config_settings
+msgid "Provider Configuration"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_provider__code
+msgid "Provider Code"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_provider__name
+msgid "Provider Name"
+msgstr ""
+
+#. module: arc_pod
+#: model_terms:ir.model.constraint,message:arc_pod.constraint_pod_provider_unique_code
+msgid "Provider code must be unique!"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields,field_description:arc_pod.field_pod_config__selected_provider_id
+msgid "Selected Provider"
+msgstr ""
+
+#. module: arc_pod
+#: model_terms:ir.ui.view,arch_db:arc_pod.view_pod_config_settings
+msgid "Test Connection"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields.selection,name:arc_pod.selection__pod_config__connection_status__failed
+msgid "Failed"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields.selection,name:arc_pod.selection__pod_config__connection_status__not_tested
+msgid "Not Tested"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields.selection,name:arc_pod.selection__pod_config__connection_status__success
+msgid "Success"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields.selection,name:arc_pod.selection__pod_provider__code__printify
+msgid "Printify"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields.selection,name:arc_pod.selection__pod_provider__code__gelato
+msgid "Gelato"
+msgstr ""
+
+#. module: arc_pod
+#: model:ir.model.fields.selection,name:arc_pod.selection__pod_provider__code__printful
+msgid "Printful"
+msgstr ""

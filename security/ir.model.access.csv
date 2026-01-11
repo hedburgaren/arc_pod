@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_pod_provider_user,access_pod_provider_user,model_pod_provider,base.group_user,1,0,0,0
+access_pod_provider_manager,access_pod_provider_manager,model_pod_provider,base.group_system,1,1,1,1
+access_pod_config_manager,access_pod_config_manager,model_pod_config,base.group_system,1,1,1,1

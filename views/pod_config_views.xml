@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Settings View -->
+    <record id="view_pod_config_settings" model="ir.ui.view">
+        <field name="name">pod.config.settings</field>
+        <field name="model">pod.config</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="ARC POD" name="arc_pod">
+                    <block title="Provider Configuration" name="provider_configuration">
+                        <setting>
+                            <label for="selected_provider_id" string="Selected Provider"/>
+                            <div class="text-muted">
+                                Choose your print-on-demand service provider
+                            </div>
+                            <div>
+                                <field name="selected_provider_id" class="oe_inline"/>
+                            </div>
+                        </setting>
+                        <setting>
+                            <label for="api_key" string="API Key"/>
+                            <div class="text-muted">
+                                Enter the API key for your selected provider
+                            </div>
+                            <div>
+                                <field name="api_key" password="True" class="oe_inline"/>
+                            </div>
+                        </setting>
+                        <setting>
+                            <label for="api_secret" string="API Secret"/>
+                            <div class="text-muted">
+                                Enter the API secret (only required for some providers)
+                            </div>
+                            <div>
+                                <field name="api_secret" password="True" class="oe_inline"/>
+                            </div>
+                        </setting>
+                        <setting>
+                            <div>
+                                <button name="action_test_connection" 
+                                    string="Test Connection" 
+                                    type="object" 
+                                    class="btn-primary"/>
+                                <field name="connection_status" widget="badge" 
+                                    decoration-info="connection_status == 'not_tested'"
+                                    decoration-success="connection_status == 'success'"
+                                    decoration-danger="connection_status == 'failed'"
+                                    class="ms-2"/>
+                            </div>
+                            <div class="text-muted mt-2" invisible="not connection_message">
+                                <field name="connection_message" readonly="1"/>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>
