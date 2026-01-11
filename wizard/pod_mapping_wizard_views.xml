@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Form View -->
+    <record id="view_pod_mapping_wizard_form" model="ir.ui.view">
+        <field name="name">pod.mapping.wizard.form</field>
+        <field name="model">pod.mapping.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Create POD Mapping">
+                <group>
+                    <group>
+                        <field name="product_id"/>
+                        <field name="provider_id"/>
+                    </group>
+                    <group>
+                        <field name="pod_product_id" options="{'no_create': True}"/>
+                        <field name="pod_variant_id" options="{'no_create': True}"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_create_mapping" 
+                        string="Create Mapping" 
+                        type="object" 
+                        class="btn-primary"/>
+                    <button string="Cancel" 
+                        class="btn-secondary" 
+                        special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

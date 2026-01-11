@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_pod_product_tree" model="ir.ui.view">
+        <field name="name">pod.product.tree</field>
+        <field name="model">pod.product</field>
+        <field name="arch" type="xml">
+            <tree string="POD Products">
+                <field name="name"/>
+                <field name="provider_id"/>
+                <field name="external_id"/>
+                <field name="variant_ids" string="Variant Count" widget="badge"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_pod_product_form" model="ir.ui.view">
+        <field name="name">pod.product.form</field>
+        <field name="model">pod.product</field>
+        <field name="arch" type="xml">
+            <form string="POD Product">
+                <sheet>
+                    <field name="image" widget="image" class="oe_avatar"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Product Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="provider_id"/>
+                            <field name="external_id"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="description" placeholder="Product description..."/>
+                    </group>
+                    <notebook>
+                        <page string="Variants" name="variants">
+                            <field name="variant_ids" mode="tree">
+                                <tree string="Variants" editable="bottom">
+                                    <field name="name"/>
+                                    <field name="sku"/>
+                                    <field name="size"/>
+                                    <field name="color"/>
+                                    <field name="price"/>
+                                    <field name="active"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_pod_product" model="ir.actions.act_window">
+        <field name="name">POD Products</field>
+        <field name="res_model">pod.product</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No POD products found
+            </p>
+            <p>
+                Sync products from your POD providers to see them here.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_pod_product"
+        name="POD Products"
+        parent="pod_provider_views.menu_arc_pod_config"
+        action="action_pod_product"
+        sequence="30"/>
+</odoo>

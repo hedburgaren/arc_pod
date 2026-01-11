@@ -6,24 +6,14 @@
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
-            <xpath expr="//notebook" position="inside">
-                <page string="POD Mappings" name="pod_mappings">
-                    <group>
-                        <button name="action_open_pod_catalog_wizard" 
-                            string="Add POD Mapping" 
-                            type="object" 
-                            class="btn-primary"/>
-                    </group>
-                    <field name="pod_mapping_ids" mode="tree">
-                        <tree string="POD Mappings">
-                            <field name="provider_id"/>
-                            <field name="pod_product_name"/>
-                            <field name="pod_sku"/>
-                            <field name="last_sync"/>
-                            <field name="active"/>
-                        </tree>
-                    </field>
-                </page>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_pod_mappings" 
+                    type="object" 
+                    class="oe_stat_button" 
+                    icon="fa-link"
+                    invisible="pod_mapping_count == 0">
+                    <field name="pod_mapping_count" widget="statinfo" string="POD Mappings"/>
+                </button>
             </xpath>
         </field>
     </record>
