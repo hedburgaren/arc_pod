@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Printify Provider -->
+        <record id="pod_provider_printify" model="pod.provider">
+            <field name="name">Printify</field>
+            <field name="code">printify</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- Gelato Provider -->
+        <record id="pod_provider_gelato" model="pod.provider">
+            <field name="name">Gelato</field>
+            <field name="code">gelato</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- Printful Provider -->
+        <record id="pod_provider_printful" model="pod.provider">
+            <field name="name">Printful</field>
+            <field name="code">printful</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>
