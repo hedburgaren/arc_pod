@@ -4,13 +4,13 @@
 import json
 import logging
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
 
 class PodCatalogWizard(models.TransientModel):
-    """Wizard for browsing POD provider catalog and creating product mappings."""
+    """Wizard for browsing POD product catalogs and creating mappings."""
 
     _name = 'pod.catalog.wizard'
     _description = 'POD Catalog Wizard'
@@ -19,117 +19,97 @@ class PodCatalogWizard(models.TransientModel):
         comodel_name='pod.provider',
         string='Provider',
         required=True,
-        help='Select the POD provider to fetch products from',
-    )
-    catalog_ids = fields.One2many(
-        comodel_name='pod.product.catalog',
-        inverse_name='wizard_id',
-        string='Available Products',
-        help='Products available from the selected provider',
-    )
-    selected_catalog_id = fields.Many2one(
-        comodel_name='pod.product.catalog',
-        string='Selected Product',
-        help='Selected product to map',
     )
     odoo_product_id = fields.Many2one(
         comodel_name='product.template',
         string='Odoo Product',
         required=True,
-        help='Odoo product to map to POD provider product',
+    )
+    catalog_ids = fields.One2many(
+        comodel_name='pod.product.catalog',
+        inverse_name='create_uid',  # Using create_uid as a workaround for transient models
+        string='Available Products',
+    )
+    selected_catalog_id = fields.Many2one(
+        comodel_name='pod.product.catalog',
+        string='Selected Product',
+        help='Selected product from catalog',
     )
 
     def action_fetch_catalog(self):
-        """
-        Fetch products from selected provider.
-        
-        Steps:
-        1. Get API client for selected provider
-        2. Call get_products()
-        3. Populate catalog_ids with results
-        4. Refresh view
-        """
+        """Fetch products from selected provider and populate catalog."""
         self.ensure_one()
         
         if not self.provider_id:
-            raise ValidationError(_('Please select a provider first.'))
+            raise UserError(_("Please select a provider first."))
         
-        # Check if provider is configured
+        # Get API configuration
         IrConfigParameter = self.env['ir.config_parameter'].sudo()
-        selected_provider_id = IrConfigParameter.get_param('arc_pod.selected_provider_id', default=False)
+        api_key = IrConfigParameter.get_param('arc_pod.api_key', default='')
+        shop_id = IrConfigParameter.get_param('arc_pod.shop_id', default='')
         
-        if not selected_provider_id or int(selected_provider_id) != self.provider_id.id:
-            raise UserError(
-                _('The selected provider is not configured in Settings > ARC POD. '
-                  'Please configure it first.')
-            )
-        
-        # Get API client based on provider
-        api_client = self._get_api_client()
-        if not api_client:
-            raise UserError(_('API client not available for provider: %s') % self.provider_id.name)
+        if not api_key:
+            raise UserError(_("API Key is not configured. Please configure it in Settings > ARC POD."))
         
         try:
-            # Fetch products from API
+            # Get the appropriate API client based on provider
+            provider_code = self.provider_id.code
+            
+            if provider_code == 'printify':
+                from ..models.printify_api import PrintifyAPI
+                if not shop_id:
+                    raise UserError(_("Shop ID is required for Printify. Please configure it in Settings > ARC POD."))
+                api_client = PrintifyAPI(api_key, shop_id)
+            elif provider_code == 'gelato':
+                from ..models.gelato_api import GelatoAPI
+                api_client = GelatoAPI(api_key)
+            elif provider_code == 'printful':
+                from ..models.printful_api import PrintfulAPI
+                api_client = PrintfulAPI(api_key)
+            else:
+                raise UserError(_("Unsupported provider: %s") % provider_code)
+            
+            # Fetch products
             products = api_client.get_products()
+            
+            if not products:
+                raise UserError(_("No products found in %s catalog.") % self.provider_id.name)
             
             # Clear existing catalog entries
             self.catalog_ids.unlink()
             
             # Create catalog entries
-            catalog_vals = []
+            CatalogModel = self.env['pod.product.catalog']
             for product in products:
-                # Store variants as JSON string
-                variants_json = json.dumps(product.get('variants', []))
-                
-                catalog_vals.append({
-                    'wizard_id': self.id,
+                CatalogModel.create({
                     'provider_id': self.provider_id.id,
-                    'product_id': product.get('id', ''),
-                    'name': product.get('name', ''),
+                    'product_id': product['id'],
+                    'name': product['name'],
                     'description': product.get('description', ''),
                     'sku': product.get('sku', ''),
-                    'variants': variants_json,
-                    'thumbnail_url': product.get('thumbnail_url', ''),
+                    'variants': json.dumps(product.get('variants', [])),
                 })
-            
-            if catalog_vals:
-                self.env['pod.product.catalog'].create(catalog_vals)
-            else:
-                raise UserError(_('No products found for this provider. Please check your configuration.'))
             
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'message': _('Successfully fetched %d products from %s') % (len(catalog_vals), self.provider_id.name),
+                    'message': _('Fetched %s products from %s') % (len(products), self.provider_id.name),
                     'type': 'success',
                     'sticky': False,
                 }
             }
             
-        except UserError:
-            raise
         except Exception as e:
-            _logger.error(f"Failed to fetch catalog: {str(e)}")
-            raise UserError(_('Failed to fetch products: %s') % str(e))
+            _logger.error(f"Error fetching catalog: {str(e)}")
+            raise UserError(_("Failed to fetch catalog: %s") % str(e))
 
     def action_create_mapping(self):
-        """
-        Create product mapping from selected catalog item.
-        
-        Steps:
-        1. Validate selection
-        2. Create pod.product.mapping record
-        3. Close wizard
-        """
+        """Create product mapping from selected catalog item."""
         self.ensure_one()
         
         if not self.selected_catalog_id:
-            raise ValidationError(_('Please select a product from the catalog first.'))
-        
-        if not self.odoo_product_id:
-            raise ValidationError(_('Odoo product is required.'))
+            raise UserError(_("Please select a product from the catalog first."))
         
         # Check if mapping already exists
         existing_mapping = self.env['pod.product.mapping'].search([
@@ -138,12 +118,12 @@ class PodCatalogWizard(models.TransientModel):
         ])
         
         if existing_mapping:
-            raise ValidationError(
-                _('A mapping already exists for this product and provider. '
-                  'Please edit the existing mapping instead.')
-            )
+            raise UserError(_(
+                "A mapping already exists for this product and provider. "
+                "Please edit the existing mapping or delete it first."
+            ))
         
-        # Create mapping
+        # Create the mapping
         mapping_vals = {
             'odoo_product_id': self.odoo_product_id.id,
             'provider_id': self.provider_id.id,
@@ -165,28 +145,3 @@ class PodCatalogWizard(models.TransientModel):
                 'next': {'type': 'ir.actions.act_window_close'},
             }
         }
-
-    def _get_api_client(self):
-        """
-        Get the appropriate API client for the provider.
-        
-        Returns:
-            API client instance or None
-        """
-        if not self.provider_id:
-            return None
-        
-        provider_code = self.provider_id.code
-        
-        # Import API clients dynamically
-        if provider_code == 'printify':
-            from odoo.addons.arc_pod.models.printify_api import PrintifyAPI
-            return PrintifyAPI(self.env)
-        elif provider_code == 'gelato':
-            from odoo.addons.arc_pod.models.gelato_api import GelatoAPI
-            return GelatoAPI(self.env)
-        elif provider_code == 'printful':
-            from odoo.addons.arc_pod.models.printful_api import PrintfulAPI
-            return PrintfulAPI(self.env)
-        
-        return None

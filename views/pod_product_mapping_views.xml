@@ -23,12 +23,19 @@
         <field name="arch" type="xml">
             <form string="Product Mapping">
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_sync_from_provider" 
+                            type="object" 
+                            string="Refresh from Provider" 
+                            class="oe_stat_button" 
+                            icon="fa-refresh"/>
+                    </div>
                     <group>
                         <group string="Odoo Product">
-                            <field name="odoo_product_id" required="1"/>
+                            <field name="odoo_product_id"/>
                         </group>
                         <group string="POD Provider">
-                            <field name="provider_id" required="1"/>
+                            <field name="provider_id"/>
                             <field name="pod_product_id"/>
                             <field name="pod_product_name" readonly="1"/>
                             <field name="pod_sku" readonly="1"/>
@@ -39,13 +46,6 @@
                         <field name="last_sync" readonly="1"/>
                         <field name="active"/>
                     </group>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_sync_from_provider" 
-                            type="object" 
-                            string="Refresh from Provider" 
-                            class="oe_stat_button" 
-                            icon="fa-refresh"/>
-                    </div>
                 </sheet>
             </form>
         </field>
@@ -61,7 +61,7 @@
                 Create your first product mapping
             </p>
             <p>
-                Map Odoo products to print-on-demand provider products to enable order synchronization.
+                Map Odoo products to print-on-demand provider products.
             </p>
         </field>
     </record>

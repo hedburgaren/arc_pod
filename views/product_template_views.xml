@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Inherit Product Template Form View -->
-    <record id="view_product_template_form_pod" model="ir.ui.view">
-        <field name="name">product.template.form.pod</field>
+    <record id="view_product_template_form_inherit_pod" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.pod</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
                 <page string="POD Mappings" name="pod_mappings">
-                    <field name="pod_mapping_ids" context="{'default_odoo_product_id': active_id}">
-                        <tree string="POD Mappings" create="false" delete="true">
+                    <group>
+                        <button name="action_open_pod_catalog_wizard" 
+                            string="Add POD Mapping" 
+                            type="object" 
+                            class="btn-primary"/>
+                    </group>
+                    <field name="pod_mapping_ids" mode="tree">
+                        <tree string="POD Mappings">
                             <field name="provider_id"/>
                             <field name="pod_product_name"/>
                             <field name="pod_sku"/>
@@ -17,12 +23,6 @@
                             <field name="active"/>
                         </tree>
                     </field>
-                    <div class="mt-2">
-                        <button name="action_open_pod_catalog_wizard" 
-                            string="Add POD Mapping" 
-                            type="object" 
-                            class="btn-primary"/>
-                    </div>
                 </page>
             </xpath>
         </field>

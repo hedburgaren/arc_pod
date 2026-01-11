@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_pod_error_log_tree" model="ir.ui.view">
+        <field name="name">pod.error.log.tree</field>
+        <field name="model">pod.error.log</field>
+        <field name="arch" type="xml">
+            <tree string="POD Error Logs">
+                <field name="timestamp"/>
+                <field name="provider_id"/>
+                <field name="error_message"/>
+                <field name="error_code"/>
+                <field name="request_endpoint"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_pod_error_log_form" model="ir.ui.view">
+        <field name="name">pod.error.log.form</field>
+        <field name="model">pod.error.log</field>
+        <field name="arch" type="xml">
+            <form string="POD Error Log">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="timestamp"/>
+                            <field name="provider_id"/>
+                            <field name="error_code"/>
+                        </group>
+                        <group>
+                            <field name="request_endpoint"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="error_message" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_pod_error_log" model="ir.actions.act_window">
+        <field name="name">Error Logs</field>
+        <field name="res_model">pod.error.log</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No error logs found
+            </p>
+            <p>
+                Error logs will appear here when API connection tests fail.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem
+        id="menu_pod_error_log"
+        name="Error Logs"
+        parent="base.menu_administration"
+        action="action_pod_error_log"
+        sequence="100"/>
+</odoo>
