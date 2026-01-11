@@ -37,6 +37,15 @@
                             </div>
                         </setting>
                         <setting>
+                            <label for="shop_id" string="Shop/Store ID"/>
+                            <div class="text-muted">
+                                Enter the Shop or Store ID (required for some providers like Printify)
+                            </div>
+                            <div>
+                                <field name="shop_id" class="oe_inline"/>
+                            </div>
+                        </setting>
+                        <setting>
                             <div>
                                 <button name="action_test_connection" 
                                     string="Test Connection" 
