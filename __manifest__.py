@@ -43,6 +43,7 @@ Features:
         'views/pod_product_variant_views.xml',
         'views/pod_product_mapping_views.xml',
         'views/product_product_views.xml',
+        'views/product_template_views.xml',
     ],
     'installable': True,
     'application': True,
