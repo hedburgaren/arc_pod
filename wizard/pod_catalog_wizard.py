@@ -188,14 +188,3 @@ class PodCatalogWizard(models.TransientModel):
         # Close the wizard
         return {'type': 'ir.actions.act_window_close'}
 
-
-class PodProductCatalogWizard(models.TransientModel):
-    """Extended catalog model to link with wizard."""
-
-    _inherit = 'pod.product.catalog'
-
-    wizard_id = fields.Many2one(
-        comodel_name='pod.catalog.wizard',
-        string='Wizard',
-        ondelete='cascade',
-    )

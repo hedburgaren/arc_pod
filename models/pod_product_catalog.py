@@ -17,6 +17,11 @@ class PodProductCatalog(models.TransientModel):
     _description = 'POD Product Catalog'
     _order = 'name'
 
+    wizard_id = fields.Many2one(
+        comodel_name='pod.catalog.wizard',
+        string='Wizard',
+        ondelete='cascade',
+    )
     provider_id = fields.Many2one(
         comodel_name='pod.provider',
         string='Provider',

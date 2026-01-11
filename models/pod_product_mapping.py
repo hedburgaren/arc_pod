@@ -32,7 +32,7 @@ class PodProductMapping(models.Model):
         comodel_name='pod.provider',
         string='POD Provider',
         required=True,
-        ondelete='cascade',
+        ondelete='restrict',
         index=True,
     )
     pod_product_id = fields.Char(
