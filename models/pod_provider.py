@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0).
 
-from odoo import models, fields, api, _
+from odoo import models, fields, api
 
 
 class PodProvider(models.Model):
     """Model representing print-on-demand service providers."""
-    
+
     _name = 'pod.provider'
     _description = 'Print on Demand Provider'
     _order = 'name'
@@ -53,7 +53,7 @@ class PodProvider(models.Model):
     def _get_api_url(self):
         """
         Return the correct API URL based on provider code.
-        
+
         Returns:
             str: Base API URL for the provider
         """

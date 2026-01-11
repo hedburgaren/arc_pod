@@ -6,7 +6,7 @@ from odoo import models, fields, api, _
 
 class PodConfig(models.TransientModel):
     """Configuration settings for ARC POD integration."""
-    
+
     _name = 'pod.config'
     _inherit = 'res.config.settings'
     _description = 'POD Configuration Settings'
@@ -44,7 +44,7 @@ class PodConfig(models.TransientModel):
         """Retrieve configuration values from system parameters."""
         res = super(PodConfig, self).get_values()
         IrConfigParameter = self.env['ir.config_parameter'].sudo()
-        
+
         provider_id = IrConfigParameter.get_param('arc_pod.selected_provider_id', default=False)
         res.update(
             selected_provider_id=int(provider_id) if provider_id else False,
@@ -59,7 +59,7 @@ class PodConfig(models.TransientModel):
         """Store configuration values in system parameters."""
         super(PodConfig, self).set_values()
         IrConfigParameter = self.env['ir.config_parameter'].sudo()
-        
+
         IrConfigParameter.set_param('arc_pod.selected_provider_id', self.selected_provider_id.id or False)
         IrConfigParameter.set_param('arc_pod.api_key', self.api_key or '')
         IrConfigParameter.set_param('arc_pod.api_secret', self.api_secret or '')
