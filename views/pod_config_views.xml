@@ -51,6 +51,21 @@
                             <div class="text-muted mt-2" invisible="not connection_message">
                                 <field name="connection_message" readonly="1"/>
                             </div>
+                            <div class="text-muted mt-2" invisible="not last_connection_test">
+                                <label for="last_connection_test" string="Last Test:"/>
+                                <field name="last_connection_test" readonly="1" class="ms-2"/>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Recent Errors" name="recent_errors">
+                        <setting>
+                            <field name="error_log_ids" nolabel="1">
+                                <tree limit="3">
+                                    <field name="timestamp"/>
+                                    <field name="error_message"/>
+                                    <field name="error_code"/>
+                                </tree>
+                            </field>
                         </setting>
                     </block>
                 </app>
