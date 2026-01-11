@@ -126,3 +126,114 @@ class PrintifyAPI(PodAPIClient):
 
         _logger.info("Fetched %s products from Printify", len(products))
         return {'products': products}
+
+    def create_order(self, order_data):
+        """
+        Create an order in Printify.
+        Calls POST /v1/shops/{shop_id}/orders.json endpoint.
+
+        Args:
+            order_data (dict): Order data in format:
+                {
+                    'external_id': 'SO001-12345',
+                    'line_items': [
+                        {
+                            'product_id': '5d39a59...',
+                            'variant_id': '12345',
+                            'quantity': 2
+                        }
+                    ],
+                    'shipping_method': 1,
+                    'address_to': {
+                        'first_name': 'John',
+                        'last_name': 'Doe',
+                        'email': 'john@example.com',
+                        'address1': '123 Main St',
+                        'city': 'New York',
+                        'zip': '10001',
+                        'country': 'US'
+                    }
+                }
+
+        Returns:
+            dict: {'success': True/False, 'order_id': '...', 'message': '...'}
+        """
+        _logger.info("Creating order in Printify")
+
+        shop_id = getattr(self, 'shop_id', None)
+        if not shop_id:
+            _logger.error("Shop ID not provided for Printify API")
+            return {
+                'success': False,
+                'message': _("Shop ID not configured for Printify"),
+            }
+
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint=f'shops/{shop_id}/orders.json',
+            method='POST',
+            data=order_data
+        )
+
+        if success:
+            order_id = response_data.get('id', '')
+            _logger.info("Order created successfully in Printify: %s", order_id)
+            return {
+                'success': True,
+                'order_id': str(order_id),
+                'message': _("Order created successfully"),
+            }
+        else:
+            _logger.error("Failed to create Printify order: %s", error_message)
+            return {
+                'success': False,
+                'message': error_message,
+            }
+
+    def get_order_status(self, order_id):
+        """
+        Get order status from Printify.
+        Calls GET /v1/shops/{shop_id}/orders/{order_id}.json endpoint.
+
+        Args:
+            order_id (str): Printify order ID
+
+        Returns:
+            dict: {
+                'tracking_number': '...',
+                'tracking_url': '...',
+                'status': '...'
+            }
+        """
+        _logger.info("Fetching order status from Printify: %s", order_id)
+
+        shop_id = getattr(self, 'shop_id', None)
+        if not shop_id:
+            _logger.error("Shop ID not provided for Printify API")
+            return {}
+
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint=f'shops/{shop_id}/orders/{order_id}.json',
+            method='GET'
+        )
+
+        if success:
+            # Extract tracking information
+            shipments = response_data.get('shipments', [])
+            tracking_number = ''
+            tracking_url = ''
+            
+            if shipments:
+                tracking_number = shipments[0].get('tracking_number', '')
+                tracking_url = shipments[0].get('tracking_url', '')
+            
+            status = response_data.get('status', '')
+            
+            _logger.info("Order status fetched: %s", status)
+            return {
+                'tracking_number': tracking_number,
+                'tracking_url': tracking_url,
+                'status': status,
+            }
+        else:
+            _logger.error("Failed to fetch Printify order status: %s", error_message)
+            return {}

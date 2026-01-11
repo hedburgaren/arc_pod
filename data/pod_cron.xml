@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Cron Job for POD Order Status Sync -->
+    <record id="cron_pod_order_sync" model="ir.cron">
+        <field name="name">Sync POD Order Status</field>
+        <field name="model_id" ref="model_pod_order"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_fetch_all_pending_status()</field>
+        <field name="interval_number">6</field>
+        <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="doall" eval="False"/>
+    </record>
+</odoo>
