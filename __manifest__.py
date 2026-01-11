@@ -3,7 +3,7 @@
 
 {
     'name': 'ARC POD - Print on Demand Integration',
-    'version': '18.0.1.2.0',
+    'version': '18.0.1.3.0',
     'category': 'Sales',
     'summary': 'Connect to Printify, Gelato, and Printful',
     'description': """
@@ -22,6 +22,7 @@ Features:
 * Test API connections
 * Map Odoo products to POD products
 * Browse and sync product catalogs
+* Order synchronization with POD providers
 
     """,
     'author': 'hedburgaren',
@@ -30,12 +31,13 @@ Features:
     'depends': [
         'base',
         'product',
+        'sale',
         'sale_management',
-        'product',
     ],
     'data': [
         'security/ir.model.access.csv',
         'data/pod_provider_data.xml',
+        'data/pod_cron.xml',
         'wizard/pod_mapping_wizard_views.xml',
         'views/pod_provider_views.xml',
         'views/pod_config_views.xml',
@@ -45,6 +47,8 @@ Features:
         'views/pod_product_mapping_views.xml',
         'views/product_product_views.xml',
         'views/product_template_views.xml',
+        'views/pod_order_views.xml',
+        'views/sale_order_views.xml',
     ],
     'installable': True,
     'application': True,

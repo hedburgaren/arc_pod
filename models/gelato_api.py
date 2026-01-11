@@ -99,3 +99,75 @@ class GelatoAPI(PodAPIClient):
 
         _logger.info("Fetched %s products from Gelato", len(products))
         return {'products': products}
+
+    def create_order(self, order_data):
+        """
+        Create an order in Gelato.
+        Calls appropriate Gelato order creation endpoint.
+
+        Args:
+            order_data (dict): Order data in Gelato format
+
+        Returns:
+            dict: {'success': True/False, 'order_id': '...', 'message': '...'}
+        """
+        _logger.info("Creating order in Gelato")
+
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint='orders',
+            method='POST',
+            data=order_data
+        )
+
+        if success:
+            order_id = response_data.get('orderUid', '')
+            _logger.info("Order created successfully in Gelato: %s", order_id)
+            return {
+                'success': True,
+                'order_id': str(order_id),
+                'message': _("Order created successfully"),
+            }
+        else:
+            _logger.error("Failed to create Gelato order: %s", error_message)
+            return {
+                'success': False,
+                'message': error_message,
+            }
+
+    def get_order_status(self, order_id):
+        """
+        Get order status from Gelato.
+        Calls appropriate Gelato status endpoint.
+
+        Args:
+            order_id (str): Gelato order ID
+
+        Returns:
+            dict: {
+                'tracking_number': '...',
+                'tracking_url': '...',
+                'status': '...'
+            }
+        """
+        _logger.info("Fetching order status from Gelato: %s", order_id)
+
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint=f'orders/{order_id}',
+            method='GET'
+        )
+
+        if success:
+            # Extract tracking information
+            tracking_number = response_data.get('trackingNumber', '')
+            tracking_url = response_data.get('trackingUrl', '')
+            status = response_data.get('status', '')
+            
+            _logger.info("Order status fetched: %s", status)
+            return {
+                'tracking_number': tracking_number,
+                'tracking_url': tracking_url,
+                'status': status,
+            }
+        else:
+            _logger.error("Failed to fetch Gelato order status: %s", error_message)
+            return {}
