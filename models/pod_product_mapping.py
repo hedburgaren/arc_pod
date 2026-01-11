@@ -126,16 +126,18 @@ class PodProductMapping(models.Model):
                 if not shop_id:
                     raise ValidationError(_('Shop ID not configured. Printify requires a Shop ID.'))
                 api_client = PrintifyAPI(api_key=api_key, base_url=api_url)
+                products = api_client.get_products(shop_id=shop_id)
             elif provider_code == 'gelato':
                 api_client = GelatoAPI(api_key=api_key, base_url=api_url)
+                products = api_client.get_products()
             elif provider_code == 'printful':
                 api_client = PrintfulAPI(api_key=api_key, base_url=api_url)
+                products = api_client.get_products()
             else:
                 raise ValidationError(_('Unknown provider: %s') % provider_code)
 
             # Fetch products from provider
             _logger.info("Syncing product mapping from %s", provider_code)
-            products = api_client.get_products()
 
             # Find matching product
             matching_product = None

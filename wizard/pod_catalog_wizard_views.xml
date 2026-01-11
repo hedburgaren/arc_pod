@@ -26,17 +26,13 @@
                     <page string="Available Products">
                         <field name="catalog_ids" nolabel="1">
                             <tree string="Products" 
-                                  editable="bottom" 
-                                  decoration-info="id == parent.selected_catalog_id">
+                                  create="false" 
+                                  edit="false" 
+                                  delete="false">
                                 <field name="product_id" readonly="1"/>
                                 <field name="name" readonly="1"/>
                                 <field name="sku" readonly="1"/>
                                 <field name="description" readonly="1"/>
-                                <button name="%(action_select_catalog_product)d" 
-                                        string="Select" 
-                                        type="action" 
-                                        icon="fa-check"
-                                        context="{'catalog_id': id, 'wizard_id': parent.id}"/>
                             </tree>
                         </field>
                     </page>
@@ -67,20 +63,5 @@
         <field name="view_mode">form</field>
         <field name="target">new</field>
         <field name="binding_model_id" ref="product.model_product_template"/>
-    </record>
-
-    <!-- Simplified action for selecting catalog product -->
-    <record id="action_select_catalog_product" model="ir.actions.server">
-        <field name="name">Select Product</field>
-        <field name="model_id" ref="model_pod_product_catalog"/>
-        <field name="state">code</field>
-        <field name="code">
-wizard_id = context.get('wizard_id')
-catalog_id = context.get('catalog_id')
-if wizard_id and catalog_id:
-    wizard = env['pod.catalog.wizard'].browse(wizard_id)
-    catalog = env['pod.product.catalog'].browse(catalog_id)
-    wizard.write({'selected_catalog_id': catalog_id})
-        </field>
     </record>
 </odoo>

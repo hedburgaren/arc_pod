@@ -118,14 +118,14 @@ class PodCatalogWizard(models.TransientModel):
 
             _logger.info("Successfully fetched %d products from %s", len(products), provider_code)
 
+            # Return action to reload the wizard form
             return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': _('Fetched %d products from %s') % (len(products), self.provider_id.name),
-                    'type': 'success',
-                    'sticky': False,
-                }
+                'type': 'ir.actions.act_window',
+                'res_model': 'pod.catalog.wizard',
+                'res_id': self.id,
+                'view_mode': 'form',
+                'target': 'new',
+                'context': self.env.context,
             }
 
         except ValidationError:
@@ -185,16 +185,8 @@ class PodCatalogWizard(models.TransientModel):
             self.provider_id.name
         )
 
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'message': _('Product mapping created successfully'),
-                'type': 'success',
-                'sticky': False,
-                'next': {'type': 'ir.actions.act_window_close'},
-            }
-        }
+        # Close the wizard
+        return {'type': 'ir.actions.act_window_close'}
 
 
 class PodProductCatalogWizard(models.TransientModel):
