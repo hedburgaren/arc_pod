@@ -170,13 +170,13 @@ class PodProvider(models.Model):
                     synced_count += 1
                     
                 except Exception as e:
-                    _logger.error(f"Error syncing product {product.get('external_id', 'unknown')}: {str(e)}")
+                    _logger.error("Error syncing product %s: %s", product.get('external_id', 'unknown'), str(e))
                     failed_count += 1
                     
                     # Log error
                     error_log_model.create({
                         'provider_id': self.id,
-                        'error_message': f"Failed to sync product {product.get('name', 'unknown')}: {str(e)}",
+                        'error_message': _("Failed to sync product %s: %s") % (product.get('name', 'unknown'), str(e)),
                         'error_code': 'SYNC_ERROR',
                         'request_endpoint': 'product_sync',
                     })
@@ -205,5 +205,5 @@ class PodProvider(models.Model):
             }
             
         except Exception as e:
-            _logger.error(f"Error syncing products from provider: {str(e)}")
+            _logger.error("Error syncing products from provider: %s", str(e))
             raise UserError(_("Failed to sync products: %s") % str(e))

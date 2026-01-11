@@ -37,10 +37,10 @@ class PodMappingWizard(models.TransientModel):
         self.ensure_one()
 
         # Check if mapping already exists
-        existing_mapping = self.env['pod.product.mapping'].search([
+        existing_mapping = self.env['pod.product.mapping'].search_count([
             ('odoo_product_id', '=', self.product_id.id),
             ('provider_id', '=', self.provider_id.id),
-        ], limit=1)
+        ])
 
         if existing_mapping:
             raise UserError(_(

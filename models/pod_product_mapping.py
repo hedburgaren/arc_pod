@@ -60,6 +60,17 @@ class PodProductMapping(models.Model):
         ),
     ]
 
+    @api.constrains('pod_product_id', 'pod_variant_id')
+    def _check_variant_belongs_to_product(self):
+        """Ensure pod_variant_id belongs to the selected pod_product_id."""
+        for record in self:
+            if record.pod_variant_id and record.pod_product_id:
+                if record.pod_variant_id.product_id != record.pod_product_id:
+                    raise UserError(_(
+                        "The selected variant does not belong to the selected product. "
+                        "Please select a variant from the correct product."
+                    ))
+
     @api.depends('odoo_product_id', 'pod_product_id')
     def _compute_name(self):
         """Compute display name as 'Odoo Product → POD Product'."""
