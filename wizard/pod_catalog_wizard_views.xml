@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Form View -->
+    <record id="view_pod_catalog_wizard_form" model="ir.ui.view">
+        <field name="name">pod.catalog.wizard.form</field>
+        <field name="model">pod.catalog.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Map to POD Product">
+                <group>
+                    <group>
+                        <field name="odoo_product_id" readonly="1"/>
+                        <field name="provider_id" attrs="{'readonly': [('catalog_ids', '!=', [])]}"/>
+                    </group>
+                </group>
+                <group>
+                    <button name="action_fetch_catalog" 
+                        string="Fetch Products" 
+                        type="object" 
+                        class="btn-primary"
+                        attrs="{'invisible': [('catalog_ids', '!=', [])]}"/>
+                </group>
+                <group string="Available Products" attrs="{'invisible': [('catalog_ids', '=', [])]}">
+                    <field name="catalog_ids" nolabel="1">
+                        <tree string="Products" create="false" delete="false" editable="bottom">
+                            <field name="product_id" invisible="1"/>
+                            <field name="name"/>
+                            <field name="sku"/>
+                            <field name="description"/>
+                        </tree>
+                    </field>
+                    <field name="selected_catalog_id" 
+                        domain="[('wizard_id', '=', id)]"
+                        options="{'no_create': True, 'no_open': True}"/>
+                </group>
+                <footer>
+                    <button string="Create Mapping" 
+                        name="action_create_mapping" 
+                        type="object" 
+                        class="btn-primary"
+                        attrs="{'invisible': [('selected_catalog_id', '=', False)]}"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_pod_catalog_wizard" model="ir.actions.act_window">
+        <field name="name">Map to POD Product</field>
+        <field name="res_model">pod.catalog.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
