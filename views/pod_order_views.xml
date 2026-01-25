@@ -54,16 +54,11 @@
                         <field name="error_message" readonly="1" nolabel="1"/>
                     </group>
                     <notebook>
-                        <page string="Order Lines" name="order_lines">
-                            <field name="sale_order_id" invisible="1"/>
-                            <field name="provider_id" invisible="1"/>
+                        <page string="Sale Order Details" name="order_details">
                             <group>
-                                <field name="sale_order_id" readonly="1">
-                                    <tree>
-                                        <field name="order_line" invisible="1"/>
-                                    </tree>
-                                </field>
+                                <field name="sale_order_id" readonly="1" context="{'form_view_ref': 'sale.view_order_form'}"/>
                             </group>
+                            <separator string="Note: Click on the Sale Order above to view full order details including order lines"/>
                         </page>
                     </notebook>
                 </sheet>
@@ -102,7 +97,7 @@
         <field name="name">POD Orders</field>
         <field name="res_model">pod.order</field>
         <field name="view_mode">tree,form</field>
-        <field name="context">{'search_default_filter_pending': 1, 'search_default_filter_error': 1}</field>
+        <field name="context">{'search_default_filter_pending': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No POD orders found

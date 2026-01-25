@@ -146,29 +146,11 @@ class SaleOrder(models.Model):
                 _logger.error("Failed to create/send POD order for provider %s: %s", provider.name, str(e))
                 failed_providers.append(provider.name)
         
-        # Show notification with results
+        # Log notification results
         if created_orders and not failed_providers:
-            message = _("Successfully created and sent %d POD order(s)") % len(created_orders)
-            notification_type = 'success'
+            _logger.info("Successfully created and sent %d POD order(s) for %s", len(created_orders), self.name)
         elif created_orders and failed_providers:
-            message = _("Created %d POD order(s). Failed for: %s") % (
-                len(created_orders),
-                ', '.join(failed_providers)
-            )
-            notification_type = 'warning'
+            _logger.warning("Created %d POD order(s) for %s. Failed for: %s", 
+                          len(created_orders), self.name, ', '.join(failed_providers))
         elif failed_providers:
-            message = _("Failed to create POD orders for: %s") % ', '.join(failed_providers)
-            notification_type = 'danger'
-        else:
-            # No orders created (might be already existing)
-            return
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'message': message,
-                'type': notification_type,
-                'sticky': notification_type != 'success',
-            }
-        }
+            _logger.error("Failed to create POD orders for %s: %s", self.name, ', '.join(failed_providers))
