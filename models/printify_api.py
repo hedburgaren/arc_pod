@@ -129,54 +129,49 @@ class PrintifyAPI(PodAPIClient):
 
     def create_order(self, order_data):
         """
-        Create a new order in Printify.
+        Create an order in Printify.
         Calls POST /v1/shops/{shop_id}/orders.json endpoint.
 
         Args:
-            order_data (dict): Order data with recipient and items
+            order_data (dict): Order data in format:
+                {
+                    'external_id': 'SO001-12345',
+                    'line_items': [
+                        {
+                            'product_id': '5d39a59...',
+                            'variant_id': '12345',
+                            'quantity': 2
+                        }
+                    ],
+                    'shipping_method': 1,
+                    'address_to': {
+                        'first_name': 'John',
+                        'last_name': 'Doe',
+                        'email': 'john@example.com',
+                        'address1': '123 Main St',
+                        'city': 'New York',
+                        'zip': '10001',
+                        'country': 'US'
+                    }
+                }
 
         Returns:
-            dict: {'success': bool, 'order_id': str, 'message': str}
+            dict: {'success': True/False, 'order_id': '...', 'message': '...'}
         """
         _logger.info("Creating order in Printify")
 
         shop_id = getattr(self, 'shop_id', None)
         if not shop_id:
             _logger.error("Shop ID not provided for Printify API")
-            return {'success': False, 'message': _("Shop ID not configured")}
-
-        # Transform order data to Printify format
-        printify_data = {
-            'external_id': order_data.get('external_id', ''),
-            'label': order_data.get('label', ''),
-            'line_items': [],
-            'shipping_method': 1,  # Standard shipping
-            'address_to': {
-                'first_name': order_data['recipient'].get('name', '').split()[0] if order_data['recipient'].get('name') else '',
-                'last_name': ' '.join(order_data['recipient'].get('name', '').split()[1:]) if len(order_data['recipient'].get('name', '').split()) > 1 else '',
-                'email': order_data['recipient'].get('email', ''),
-                'phone': order_data['recipient'].get('phone', ''),
-                'country': order_data['recipient'].get('country', ''),
-                'region': order_data['recipient'].get('state', ''),
-                'address1': order_data['recipient'].get('address1', ''),
-                'address2': order_data['recipient'].get('address2', ''),
-                'city': order_data['recipient'].get('city', ''),
-                'zip': order_data['recipient'].get('zip', ''),
+            return {
+                'success': False,
+                'message': _("Shop ID not configured for Printify"),
             }
-        }
-
-        # Add line items
-        for item in order_data.get('items', []):
-            printify_data['line_items'].append({
-                'product_id': item.get('product_id'),
-                'variant_id': item.get('variant_id'),
-                'quantity': item.get('quantity', 1),
-            })
 
         success, response_data, status_code, error_message = self._make_request(
             endpoint=f'shops/{shop_id}/orders.json',
             method='POST',
-            data=printify_data
+            data=order_data
         )
 
         if success:
@@ -185,13 +180,13 @@ class PrintifyAPI(PodAPIClient):
             return {
                 'success': True,
                 'order_id': str(order_id),
-                'message': _("Order created successfully")
+                'message': _("Order created successfully"),
             }
         else:
-            _logger.error("Failed to create order in Printify: %s", error_message)
+            _logger.error("Failed to create Printify order: %s", error_message)
             return {
                 'success': False,
-                'message': error_message
+                'message': error_message,
             }
 
     def get_order_status(self, order_id):
@@ -203,14 +198,18 @@ class PrintifyAPI(PodAPIClient):
             order_id (str): Printify order ID
 
         Returns:
-            dict: {'status': str, 'tracking_number': str, 'tracking_url': str}
+            dict: {
+                'tracking_number': '...',
+                'tracking_url': '...',
+                'status': '...'
+            }
         """
-        _logger.info("Getting order status from Printify: %s", order_id)
+        _logger.info("Fetching order status from Printify: %s", order_id)
 
         shop_id = getattr(self, 'shop_id', None)
         if not shop_id:
             _logger.error("Shop ID not provided for Printify API")
-            return {'status': 'error', 'tracking_number': '', 'tracking_url': ''}
+            return {}
 
         success, response_data, status_code, error_message = self._make_request(
             endpoint=f'shops/{shop_id}/orders/{order_id}.json',
@@ -218,21 +217,23 @@ class PrintifyAPI(PodAPIClient):
         )
 
         if success:
-            status = response_data.get('status', 'pending')
+            # Extract tracking information
+            shipments = response_data.get('shipments', [])
             tracking_number = ''
             tracking_url = ''
-
-            # Extract tracking info from shipments
-            shipments = response_data.get('shipments', [])
+            
             if shipments:
                 tracking_number = shipments[0].get('tracking_number', '')
                 tracking_url = shipments[0].get('tracking_url', '')
-
+            
+            status = response_data.get('status', '')
+            
+            _logger.info("Order status fetched: %s", status)
             return {
-                'status': status,
                 'tracking_number': tracking_number,
-                'tracking_url': tracking_url
+                'tracking_url': tracking_url,
+                'status': status,
             }
         else:
-            _logger.error("Failed to get order status from Printify: %s", error_message)
-            return {'status': 'error', 'tracking_number': '', 'tracking_url': ''}
+            _logger.error("Failed to fetch Printify order status: %s", error_message)
+            return {}

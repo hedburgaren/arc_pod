@@ -102,51 +102,21 @@ class PrintfulAPI(PodAPIClient):
 
     def create_order(self, order_data):
         """
-        Create a new order in Printful.
+        Create an order in Printful.
         Calls POST /orders endpoint.
 
         Args:
-            order_data (dict): Order data with recipient and items
+            order_data (dict): Order data in Printful format
 
         Returns:
-            dict: {'success': bool, 'order_id': str, 'message': str}
+            dict: {'success': True/False, 'order_id': '...', 'message': '...'}
         """
         _logger.info("Creating order in Printful")
-
-        # Transform order data to Printful format
-        printful_data = {
-            'external_id': order_data.get('external_id', ''),
-            'recipient': {
-                'name': order_data['recipient'].get('name', ''),
-                'address1': order_data['recipient'].get('address1', ''),
-                'address2': order_data['recipient'].get('address2', ''),
-                'city': order_data['recipient'].get('city', ''),
-                'state_code': order_data['recipient'].get('state', ''),
-                'country_code': order_data['recipient'].get('country', ''),
-                'zip': order_data['recipient'].get('zip', ''),
-                'email': order_data['recipient'].get('email', ''),
-                'phone': order_data['recipient'].get('phone', ''),
-            },
-            'items': []
-        }
-
-        # Add order items
-        for item in order_data.get('items', []):
-            printful_item = {
-                'variant_id': item.get('variant_id', item.get('product_id')),
-                'quantity': item.get('quantity', 1),
-            }
-            
-            # Add product_id if variant_id is different
-            if item.get('product_id'):
-                printful_item['sync_variant_id'] = item['product_id']
-            
-            printful_data['items'].append(printful_item)
 
         success, response_data, status_code, error_message = self._make_request(
             endpoint='orders',
             method='POST',
-            data=printful_data
+            data=order_data
         )
 
         if success:
@@ -156,13 +126,13 @@ class PrintfulAPI(PodAPIClient):
             return {
                 'success': True,
                 'order_id': str(order_id),
-                'message': _("Order created successfully")
+                'message': _("Order created successfully"),
             }
         else:
-            _logger.error("Failed to create order in Printful: %s", error_message)
+            _logger.error("Failed to create Printful order: %s", error_message)
             return {
                 'success': False,
-                'message': error_message
+                'message': error_message,
             }
 
     def get_order_status(self, order_id):
@@ -174,9 +144,13 @@ class PrintfulAPI(PodAPIClient):
             order_id (str): Printful order ID
 
         Returns:
-            dict: {'status': str, 'tracking_number': str, 'tracking_url': str}
+            dict: {
+                'tracking_number': '...',
+                'tracking_url': '...',
+                'status': '...'
+            }
         """
-        _logger.info("Getting order status from Printful: %s", order_id)
+        _logger.info("Fetching order status from Printful: %s", order_id)
 
         success, response_data, status_code, error_message = self._make_request(
             endpoint=f'orders/{order_id}',
@@ -185,21 +159,23 @@ class PrintfulAPI(PodAPIClient):
 
         if success:
             result = response_data.get('result', {})
-            status = result.get('status', 'pending')
+            shipments = result.get('shipments', [])
+            
             tracking_number = ''
             tracking_url = ''
-
-            # Extract tracking info from shipments
-            shipments = result.get('shipments', [])
+            
             if shipments:
                 tracking_number = shipments[0].get('tracking_number', '')
                 tracking_url = shipments[0].get('tracking_url', '')
-
+            
+            status = result.get('status', '')
+            
+            _logger.info("Order status fetched: %s", status)
             return {
-                'status': status,
                 'tracking_number': tracking_number,
-                'tracking_url': tracking_url
+                'tracking_url': tracking_url,
+                'status': status,
             }
         else:
-            _logger.error("Failed to get order status from Printful: %s", error_message)
-            return {'status': 'error', 'tracking_number': '', 'tracking_url': ''}
+            _logger.error("Failed to fetch Printful order status: %s", error_message)
+            return {}

@@ -2,24 +2,24 @@
 # License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0).
 
 import logging
+import json
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
 
 class PodOrder(models.Model):
-    """Model for POD orders synced to providers."""
+    """Model for managing POD orders sent to providers."""
 
     _name = 'pod.order'
     _description = 'POD Order'
-    _order = 'sent_date desc, id desc'
+    _order = 'created_date desc'
 
     name = fields.Char(
         string='Name',
         compute='_compute_name',
         store=True,
-        readonly=True,
     )
     sale_order_id = fields.Many2one(
         comodel_name='sale.order',
@@ -36,20 +36,19 @@ class PodOrder(models.Model):
     external_order_id = fields.Char(
         string='External Order ID',
         readonly=True,
-        help='Order ID from POD provider',
+        help='POD provider order ID after submission',
     )
-    status = fields.Selection(
+    state = fields.Selection(
         selection=[
+            ('draft', 'Draft'),
             ('pending', 'Pending'),
             ('sent', 'Sent'),
-            ('processing', 'Processing'),
-            ('shipped', 'Shipped'),
-            ('delivered', 'Delivered'),
-            ('error', 'Error'),
+            ('failed', 'Failed'),
+            ('completed', 'Completed'),
         ],
-        string='Status',
+        string='State',
         required=True,
-        default='pending',
+        default='draft',
     )
     tracking_number = fields.Char(
         string='Tracking Number',
@@ -63,119 +62,197 @@ class PodOrder(models.Model):
         string='Error Message',
         readonly=True,
     )
-    sent_date = fields.Datetime(
-        string='Sent Date',
+    last_sync = fields.Datetime(
+        string='Last Sync',
         readonly=True,
     )
-    last_status_update = fields.Datetime(
-        string='Last Status Update',
+    created_date = fields.Datetime(
+        string='Created Date',
+        default=fields.Datetime.now,
         readonly=True,
+    )
+    pod_order_data = fields.Text(
+        string='POD Order Data',
+        help='JSON storage for API response',
     )
 
     _sql_constraints = [
         (
-            'unique_sale_order_provider',
-            'UNIQUE(sale_order_id, provider_id)',
-            'Only one POD order per sale order and provider is allowed!',
+            'unique_external_order_provider',
+            'UNIQUE(external_order_id, provider_id)',
+            'External order ID must be unique per provider!',
         ),
     ]
 
     @api.depends('sale_order_id', 'provider_id')
     def _compute_name(self):
-        """Compute name from sale order and provider."""
+        """Compute display name from sale order and provider."""
         for record in self:
             if record.sale_order_id and record.provider_id:
                 record.name = f"{record.sale_order_id.name} - {record.provider_id.name}"
             else:
-                record.name = _('New POD Order')
+                record.name = _('POD Order')
 
     def action_send_to_provider(self):
-        """Send order to POD provider."""
+        """Send order to POD API."""
         self.ensure_one()
-        
+
+        # Validate state
+        if self.state != 'draft':
+            raise UserError(_("Only draft orders can be sent to provider."))
+
+        # Get API configuration
+        IrConfigParameter = self.env['ir.config_parameter'].sudo()
+        api_key = IrConfigParameter.get_param('arc_pod.api_key', default='')
+        shop_id = IrConfigParameter.get_param('arc_pod.shop_id', default='')
+
+        if not api_key:
+            raise UserError(_("API Key is not configured. Please configure it in Settings > ARC POD."))
+
         try:
-            # Validate before sending
-            self._validate_order_data()
+            # Set state to pending
+            self.write({'state': 'pending'})
+            self.env.cr.commit()
+
+            # Transform order data
+            from .pod_order_transformer import PODOrderTransformer
+            transformer = PODOrderTransformer(self.env)
             
-            # Prepare order data
-            order_data = self._prepare_order_data()
-            
-            # Get API client
-            api_client = self._get_api_client()
-            
-            # Send order to provider
-            _logger.info("Sending order %s to provider %s", self.sale_order_id.name, self.provider_id.name)
+            if self.provider_id.code == 'printify':
+                order_data = transformer.transform_for_printify(self.sale_order_id)
+                from .printify_api import PrintifyAPI
+                if not shop_id:
+                    raise UserError(_("Shop ID is required for Printify. Please configure it in Settings > ARC POD."))
+                api_client = PrintifyAPI(api_key, shop_id)
+            elif self.provider_id.code == 'gelato':
+                order_data = transformer.transform_for_gelato(self.sale_order_id)
+                from .gelato_api import GelatoAPI
+                api_client = GelatoAPI(api_key)
+            elif self.provider_id.code == 'printful':
+                order_data = transformer.transform_for_printful(self.sale_order_id)
+                from .printful_api import PrintfulAPI
+                api_client = PrintfulAPI(api_key)
+            else:
+                raise UserError(_("Unsupported provider: %s") % self.provider_id.code)
+
+            # Call provider API
+            _logger.info("Sending order %s to %s", self.name, self.provider_id.name)
             result = api_client.create_order(order_data)
-            
+
             if result.get('success'):
+                # Update order with success data
                 self.write({
-                    'status': 'sent',
+                    'state': 'sent',
                     'external_order_id': result.get('order_id'),
-                    'sent_date': fields.Datetime.now(),
-                    'last_status_update': fields.Datetime.now(),
-                    'error_message': False,
+                    'last_sync': fields.Datetime.now(),
+                    'pod_order_data': json.dumps(result, indent=2),
                 })
+                _logger.info("Order %s sent successfully to %s", self.name, self.provider_id.name)
                 
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': _("Order successfully sent to %s") % self.provider_id.name,
+                        'message': _("Order sent successfully to %s") % self.provider_id.name,
                         'type': 'success',
                         'sticky': False,
                     }
                 }
             else:
-                error_msg = result.get('message', _('Unknown error'))
-                self._log_error(error_msg, 'SEND_ORDER_FAILED')
-                raise UserError(_("Failed to send order: %s") % error_msg)
+                # Handle failure
+                error_msg = result.get('message', _('Unknown error occurred'))
+                self.write({
+                    'state': 'failed',
+                    'error_message': error_msg,
+                    'pod_order_data': json.dumps(result, indent=2),
+                })
                 
-        except Exception as e:
-            error_msg = str(e)
-            _logger.error("Error sending order to provider: %s", error_msg)
-            self._log_error(error_msg, 'SEND_ORDER_ERROR')
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': _("Error sending order: %s") % error_msg,
-                    'type': 'danger',
-                    'sticky': True,
-                }
-            }
+                # Log error
+                self.env['pod.error.log'].create({
+                    'provider_id': self.provider_id.id,
+                    'error_message': _("Failed to send order %s: %s") % (self.name, error_msg),
+                    'error_code': 'ORDER_SEND_FAILED',
+                    'request_endpoint': 'create_order',
+                })
+                
+                raise UserError(_("Failed to send order: %s") % error_msg)
 
-    def action_update_status(self):
-        """Fetch latest status from provider."""
+        except Exception as e:
+            _logger.error("Error sending order %s: %s", self.name, str(e))
+            
+            # Update order state to failed
+            self.write({
+                'state': 'failed',
+                'error_message': str(e),
+            })
+            
+            # Log error
+            self.env['pod.error.log'].create({
+                'provider_id': self.provider_id.id,
+                'error_message': _("Failed to send order %s: %s") % (self.name, str(e)),
+                'error_code': 'ORDER_SEND_ERROR',
+                'request_endpoint': 'create_order',
+            })
+            
+            raise UserError(_("Failed to send order: %s") % str(e))
+
+    def action_fetch_status(self):
+        """Retrieve tracking/status from POD API."""
         self.ensure_one()
-        
+
+        # Validate state
+        if self.state not in ['sent', 'completed']:
+            raise UserError(_("Can only fetch status for sent or completed orders."))
+
         if not self.external_order_id:
-            raise UserError(_("Cannot update status: Order has not been sent to provider yet."))
-        
+            raise UserError(_("External order ID is missing. Cannot fetch status."))
+
+        # Get API configuration
+        IrConfigParameter = self.env['ir.config_parameter'].sudo()
+        api_key = IrConfigParameter.get_param('arc_pod.api_key', default='')
+        shop_id = IrConfigParameter.get_param('arc_pod.shop_id', default='')
+
+        if not api_key:
+            raise UserError(_("API Key is not configured. Please configure it in Settings > ARC POD."))
+
         try:
             # Get API client
-            api_client = self._get_api_client()
-            
-            # Get order status
-            _logger.info("Updating status for order %s from provider %s", self.sale_order_id.name, self.provider_id.name)
-            result = api_client.get_order_status(self.external_order_id)
-            
-            # Map provider status to standard status
-            mapped_status = self._map_provider_status(result.get('status', ''))
-            
-            update_vals = {
-                'status': mapped_status,
-                'last_status_update': fields.Datetime.now(),
+            if self.provider_id.code == 'printify':
+                from .printify_api import PrintifyAPI
+                if not shop_id:
+                    raise UserError(_("Shop ID is required for Printify. Please configure it in Settings > ARC POD."))
+                api_client = PrintifyAPI(api_key, shop_id)
+            elif self.provider_id.code == 'gelato':
+                from .gelato_api import GelatoAPI
+                api_client = GelatoAPI(api_key)
+            elif self.provider_id.code == 'printful':
+                from .printful_api import PrintfulAPI
+                api_client = PrintfulAPI(api_key)
+            else:
+                raise UserError(_("Unsupported provider: %s") % self.provider_id.code)
+
+            # Fetch status
+            _logger.info("Fetching status for order %s from %s", self.name, self.provider_id.name)
+            status_data = api_client.get_order_status(self.external_order_id)
+
+            # Update tracking information
+            vals = {
+                'last_sync': fields.Datetime.now(),
             }
+
+            if status_data.get('tracking_number'):
+                vals['tracking_number'] = status_data['tracking_number']
             
-            if result.get('tracking_number'):
-                update_vals['tracking_number'] = result['tracking_number']
+            if status_data.get('tracking_url'):
+                vals['tracking_url'] = status_data['tracking_url']
             
-            if result.get('tracking_url'):
-                update_vals['tracking_url'] = result['tracking_url']
-            
-            self.write(update_vals)
-            
+            # Update state if completed
+            if status_data.get('status') in ['completed', 'shipped', 'delivered']:
+                vals['state'] = 'completed'
+
+            self.write(vals)
+            _logger.info("Status updated for order %s", self.name)
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -185,259 +262,72 @@ class PodOrder(models.Model):
                     'sticky': False,
                 }
             }
-            
+
         except Exception as e:
-            error_msg = str(e)
-            _logger.error("Error updating order status: %s", error_msg)
-            self._log_error(error_msg, 'UPDATE_STATUS_ERROR')
+            _logger.error("Error fetching status for order %s: %s", self.name, str(e))
             
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': _("Error updating status: %s") % error_msg,
-                    'type': 'danger',
-                    'sticky': True,
-                }
-            }
+            # Log error
+            self.env['pod.error.log'].create({
+                'provider_id': self.provider_id.id,
+                'error_message': _("Failed to fetch status for order %s: %s") % (self.name, str(e)),
+                'error_code': 'STATUS_FETCH_ERROR',
+                'request_endpoint': 'get_order_status',
+            })
+            
+            raise UserError(_("Failed to fetch status: %s") % str(e))
 
     def action_retry(self):
-        """Retry failed orders."""
+        """Reset to draft and retry sending."""
         self.ensure_one()
-        
-        if self.status != 'error':
-            raise UserError(_("Can only retry failed orders."))
-        
-        # Reset status and clear error
+
+        if self.state != 'failed':
+            raise UserError(_("Only failed orders can be retried."))
+
         self.write({
-            'status': 'pending',
+            'state': 'draft',
             'error_message': False,
         })
-        
-        # Try to send again
-        return self.action_send_to_provider()
 
-    def _prepare_order_data(self):
-        """Format order data for API."""
-        self.ensure_one()
-        
-        # Get shipping address
-        partner = self.sale_order_id.partner_shipping_id or self.sale_order_id.partner_id
-        
-        # Prepare recipient data
-        recipient = {
-            'name': partner.name or '',
-            'address1': partner.street or '',
-            'city': partner.city or '',
-            'zip': partner.zip or '',
-            'country': partner.country_id.code if partner.country_id else '',
-            'email': partner.email or '',
-            'phone': partner.phone or partner.mobile or '',
-        }
-        
-        # Add optional fields if available
-        if partner.street2:
-            recipient['address2'] = partner.street2
-        if partner.state_id:
-            recipient['state'] = partner.state_id.code or partner.state_id.name
-        
-        # Prepare items from order lines with POD mappings
-        items = []
-        for line in self.sale_order_id.order_line:
-            # Find POD mapping for this product and provider
-            mapping = self.env['pod.product.mapping'].search([
-                ('odoo_product_id', '=', line.product_id.id),
-                ('provider_id', '=', self.provider_id.id),
-            ], limit=1)
-            
-            if mapping and mapping.pod_product_id:
-                item = {
-                    'product_id': mapping.pod_product_id.external_id,
-                    'quantity': int(line.product_uom_qty),
-                }
-                
-                # Add variant ID if available
-                if mapping.pod_variant_id:
-                    item['variant_id'] = mapping.pod_variant_id.external_id
-                
-                items.append(item)
-        
         return {
-            'external_id': self.sale_order_id.name,  # Use sale order name as external reference
-            'label': f"Order {self.sale_order_id.name}",  # Human-readable label
-            'customer_id': str(self.sale_order_id.partner_id.id),  # Customer reference
-            'recipient': recipient,
-            'items': items,
-        }
-
-    def _validate_order_data(self):
-        """Validate order data before sending."""
-        self.ensure_one()
-        
-        # Validate shipping address
-        partner = self.sale_order_id.partner_shipping_id or self.sale_order_id.partner_id
-        
-        if not partner.name:
-            raise UserError(_("Customer name is required"))
-        if not partner.street:
-            raise UserError(_("Street address is required"))
-        if not partner.city:
-            raise UserError(_("City is required"))
-        if not partner.zip:
-            raise UserError(_("ZIP code is required"))
-        if not partner.country_id:
-            raise UserError(_("Country is required"))
-        
-        # Validate order lines have POD mappings
-        has_mapped_products = False
-        for line in self.sale_order_id.order_line:
-            mapping = self.env['pod.product.mapping'].search([
-                ('odoo_product_id', '=', line.product_id.id),
-                ('provider_id', '=', self.provider_id.id),
-            ], limit=1)
-            
-            if mapping:
-                has_mapped_products = True
-                break
-        
-        if not has_mapped_products:
-            raise UserError(_("No order lines have POD product mappings for provider %s") % self.provider_id.name)
-        
-        # Validate provider is configured
-        IrConfigParameter = self.env['ir.config_parameter'].sudo()
-        api_key = IrConfigParameter.get_param('arc_pod.api_key', default='')
-        
-        if not api_key:
-            raise UserError(_("API Key is not configured. Please configure it in Settings > ARC POD."))
-        
-        # Validate shop_id for Printify
-        if self.provider_id.code == 'printify':
-            shop_id = IrConfigParameter.get_param('arc_pod.shop_id', default='')
-            if not shop_id:
-                raise UserError(_("Shop ID is required for Printify. Please configure it in Settings > ARC POD."))
-
-    def _get_api_client(self):
-        """Get appropriate API client for provider."""
-        self.ensure_one()
-        
-        IrConfigParameter = self.env['ir.config_parameter'].sudo()
-        api_key = IrConfigParameter.get_param('arc_pod.api_key', default='')
-        
-        if self.provider_id.code == 'printify':
-            from .printify_api import PrintifyAPI
-            shop_id = IrConfigParameter.get_param('arc_pod.shop_id', default='')
-            return PrintifyAPI(api_key, shop_id)
-        elif self.provider_id.code == 'gelato':
-            from .gelato_api import GelatoAPI
-            return GelatoAPI(api_key)
-        elif self.provider_id.code == 'printful':
-            from .printful_api import PrintfulAPI
-            return PrintfulAPI(api_key)
-        else:
-            raise UserError(_("Unsupported provider: %s") % self.provider_id.code)
-
-    def _map_provider_status(self, provider_status):
-        """Map provider-specific status to standard status."""
-        self.ensure_one()
-        
-        # Normalize status string
-        status_lower = str(provider_status).lower()
-        
-        # Common status mappings
-        if status_lower in ['pending', 'draft', 'created']:
-            return 'sent'
-        elif status_lower in ['processing', 'in_progress', 'fulfillment', 'production']:
-            return 'processing'
-        elif status_lower in ['shipped', 'transit', 'dispatched']:
-            return 'shipped'
-        elif status_lower in ['delivered', 'completed', 'fulfilled']:
-            return 'delivered'
-        elif status_lower in ['error', 'failed', 'canceled', 'cancelled']:
-            return 'error'
-        else:
-            # Default to processing for unknown statuses
-            return 'processing'
-
-    def _log_error(self, error_message, error_code):
-        """Log error to pod.error.log."""
-        self.ensure_one()
-        
-        self.env['pod.error.log'].create({
-            'provider_id': self.provider_id.id,
-            'error_message': error_message,
-            'error_code': error_code,
-            'request_endpoint': 'order_sync',
-            'timestamp': fields.Datetime.now(),
-        })
-        
-        self.write({
-            'status': 'error',
-            'error_message': error_message,
-            'last_status_update': fields.Datetime.now(),
-        })
-
-    def _update_status_silent(self):
-        """Fetch latest status from provider without returning UI notifications."""
-        self.ensure_one()
-        
-        if not self.external_order_id:
-            _logger.warning("Cannot update status for order %s: No external order ID", self.name)
-            return False
-        
-        try:
-            # Get API client
-            api_client = self._get_api_client()
-            
-            # Get order status
-            result = api_client.get_order_status(self.external_order_id)
-            
-            # Map provider status to standard status
-            mapped_status = self._map_provider_status(result.get('status', ''))
-            
-            update_vals = {
-                'status': mapped_status,
-                'last_status_update': fields.Datetime.now(),
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'message': _("Order reset to draft. You can now send it again."),
+                'type': 'info',
+                'sticky': False,
             }
-            
-            if result.get('tracking_number'):
-                update_vals['tracking_number'] = result['tracking_number']
-            
-            if result.get('tracking_url'):
-                update_vals['tracking_url'] = result['tracking_url']
-            
-            self.write(update_vals)
-            return True
-            
-        except Exception as e:
-            error_msg = str(e)
-            _logger.error("Error updating order status for %s: %s", self.name, error_msg)
-            self._log_error(error_msg, 'UPDATE_STATUS_ERROR')
-            return False
+        }
 
     @api.model
-    def _cron_update_pod_orders(self):
-        """Scheduled action to update POD order statuses."""
-        _logger.info("Starting scheduled POD order status update")
+    def cron_fetch_all_pending_status(self):
+        """Cron job to fetch status for all sent orders."""
+        _logger.info("Starting cron job to fetch POD order statuses")
         
-        # Find all orders that need status updates
-        orders = self.search([
-            ('status', 'in', ['sent', 'processing', 'shipped']),
-            ('external_order_id', '!=', False),
-        ])
-        
-        _logger.info("Found %d orders to update", len(orders))
+        # Find all sent orders
+        sent_orders = self.search([('state', '=', 'sent')])
+        _logger.info("Found %s sent orders to sync", len(sent_orders))
         
         success_count = 0
         error_count = 0
         
-        for order in orders:
-            if order._update_status_silent():
+        for order in sent_orders:
+            try:
+                order.action_fetch_status()
                 success_count += 1
-            else:
+            except Exception as e:
+                _logger.error("Error syncing order %s: %s", order.name, str(e))
                 error_count += 1
+                
+                # Log error
+                self.env['pod.error.log'].create({
+                    'provider_id': order.provider_id.id,
+                    'error_message': _("Cron failed to sync order %s: %s") % (order.name, str(e)),
+                    'error_code': 'CRON_SYNC_ERROR',
+                    'request_endpoint': 'cron_fetch_all_pending_status',
+                })
         
         _logger.info(
-            "Completed POD order status update: %d successful, %d errors",
+            "Cron job completed. Synced: %s, Errors: %s",
             success_count,
             error_count
         )
