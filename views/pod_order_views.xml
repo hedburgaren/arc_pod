@@ -116,7 +116,7 @@
     <!-- Menu Item -->
     <menuitem id="menu_pod_order"
               name="POD Orders"
-              parent="pod_config_views.menu_pod_settings"
+              parent="pod_provider_views.menu_arc_pod_config"
               action="action_pod_order"
               sequence="40"/>
 </odoo>
