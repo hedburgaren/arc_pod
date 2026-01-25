@@ -364,6 +364,7 @@ class PodOrder(models.Model):
             'error_message': error_message,
             'error_code': error_code,
             'request_endpoint': 'order_sync',
+            'timestamp': fields.Datetime.now(),
         })
         
         self.write({
@@ -371,6 +372,44 @@ class PodOrder(models.Model):
             'error_message': error_message,
             'last_status_update': fields.Datetime.now(),
         })
+
+    def _update_status_silent(self):
+        """Fetch latest status from provider without returning UI notifications."""
+        self.ensure_one()
+        
+        if not self.external_order_id:
+            _logger.warning("Cannot update status for order %s: No external order ID", self.name)
+            return False
+        
+        try:
+            # Get API client
+            api_client = self._get_api_client()
+            
+            # Get order status
+            result = api_client.get_order_status(self.external_order_id)
+            
+            # Map provider status to standard status
+            mapped_status = self._map_provider_status(result.get('status', ''))
+            
+            update_vals = {
+                'status': mapped_status,
+                'last_status_update': fields.Datetime.now(),
+            }
+            
+            if result.get('tracking_number'):
+                update_vals['tracking_number'] = result['tracking_number']
+            
+            if result.get('tracking_url'):
+                update_vals['tracking_url'] = result['tracking_url']
+            
+            self.write(update_vals)
+            return True
+            
+        except Exception as e:
+            error_msg = str(e)
+            _logger.error("Error updating order status for %s: %s", self.name, error_msg)
+            self._log_error(error_msg, 'UPDATE_STATUS_ERROR')
+            return False
 
     @api.model
     def _cron_update_pod_orders(self):
@@ -389,12 +428,10 @@ class PodOrder(models.Model):
         error_count = 0
         
         for order in orders:
-            try:
-                order.action_update_status()
+            if order._update_status_silent():
                 success_count += 1
-            except Exception as e:
+            else:
                 error_count += 1
-                _logger.error("Error updating order %s: %s", order.name, str(e))
         
         _logger.info(
             "Completed POD order status update: %d successful, %d errors",

@@ -61,17 +61,6 @@ class SaleOrder(models.Model):
                     order._create_pod_orders()
                 except Exception as e:
                     _logger.error("Error creating POD orders for %s: %s", order.name, str(e))
-                    # Show error notification but don't prevent order confirmation
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'message': _("Order confirmed but POD sync failed: %s") % str(e),
-                            'type': 'warning',
-                            'sticky': True,
-                            'next': result,
-                        }
-                    }
         
         return result
 
