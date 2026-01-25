@@ -9,3 +9,5 @@ from . import pod_product_variant
 from . import pod_product_mapping
 from . import product_product
 from . import product_template
+from . import pod_order
+from . import sale_order

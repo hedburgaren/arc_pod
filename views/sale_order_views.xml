@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Sale Order Form View - Inherit -->
+    <record id="view_order_form_pod" model="ir.ui.view">
+        <field name="name">sale.order.form.pod</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Add smart button -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_pod_orders" 
+                        type="object" 
+                        class="oe_stat_button" 
+                        icon="fa-shopping-cart"
+                        invisible="pod_order_count == 0">
+                    <field name="pod_order_count" widget="statinfo" string="POD Orders"/>
+                </button>
+            </xpath>
+
+            <!-- Add notebook page -->
+            <xpath expr="//notebook" position="inside">
+                <page string="POD Orders" name="pod_orders" invisible="not has_pod_mapping">
+                    <field name="has_pod_mapping" invisible="1"/>
+                    <field name="pod_order_ids" mode="tree" readonly="1">
+                        <tree string="POD Orders" decoration-muted="state == 'draft'" 
+                              decoration-info="state in ['pending', 'sent']" 
+                              decoration-danger="state == 'failed'" 
+                              decoration-success="state == 'completed'">
+                            <field name="name"/>
+                            <field name="provider_id"/>
+                            <field name="state" widget="badge"/>
+                            <field name="tracking_number"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
