@@ -263,6 +263,9 @@ class PodOrder(models.Model):
                 items.append(item)
         
         return {
+            'external_id': self.sale_order_id.name,  # Use sale order name as external reference
+            'label': f"Order {self.sale_order_id.name}",  # Human-readable label
+            'customer_id': str(self.sale_order_id.partner_id.id),  # Customer reference
             'recipient': recipient,
             'items': items,
         }
