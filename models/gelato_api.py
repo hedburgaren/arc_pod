@@ -99,3 +99,105 @@ class GelatoAPI(PodAPIClient):
 
         _logger.info("Fetched %s products from Gelato", len(products))
         return {'products': products}
+
+    def create_order(self, order_data):
+        """
+        Create a new order in Gelato.
+        Calls appropriate Gelato endpoint for order creation.
+
+        Args:
+            order_data (dict): Order data with recipient and items
+
+        Returns:
+            dict: {'success': bool, 'order_id': str, 'message': str}
+        """
+        _logger.info("Creating order in Gelato")
+
+        # Transform order data to Gelato format
+        gelato_data = {
+            'orderReferenceId': order_data.get('external_id', ''),
+            'customerReferenceId': order_data.get('customer_id', ''),
+            'shippingAddress': {
+                'firstName': order_data['recipient'].get('name', '').split()[0] if order_data['recipient'].get('name') else '',
+                'lastName': ' '.join(order_data['recipient'].get('name', '').split()[1:]) if len(order_data['recipient'].get('name', '').split()) > 1 else '',
+                'addressLine1': order_data['recipient'].get('address1', ''),
+                'addressLine2': order_data['recipient'].get('address2', ''),
+                'city': order_data['recipient'].get('city', ''),
+                'postCode': order_data['recipient'].get('zip', ''),
+                'country': order_data['recipient'].get('country', ''),
+                'email': order_data['recipient'].get('email', ''),
+                'phone': order_data['recipient'].get('phone', ''),
+            },
+            'orderItems': []
+        }
+
+        # Add state if available
+        if order_data['recipient'].get('state'):
+            gelato_data['shippingAddress']['state'] = order_data['recipient']['state']
+
+        # Add order items
+        for item in order_data.get('items', []):
+            gelato_data['orderItems'].append({
+                'productUid': item.get('product_id'),
+                'variantUid': item.get('variant_id', ''),
+                'quantity': item.get('quantity', 1),
+            })
+
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint='orders',
+            method='POST',
+            data=gelato_data
+        )
+
+        if success:
+            order_id = response_data.get('orderUid', response_data.get('id', ''))
+            _logger.info("Order created successfully in Gelato: %s", order_id)
+            return {
+                'success': True,
+                'order_id': str(order_id),
+                'message': _("Order created successfully")
+            }
+        else:
+            _logger.error("Failed to create order in Gelato: %s", error_message)
+            return {
+                'success': False,
+                'message': error_message
+            }
+
+    def get_order_status(self, order_id):
+        """
+        Get order status from Gelato.
+        Calls GET /orders/{order_id} endpoint.
+
+        Args:
+            order_id (str): Gelato order ID
+
+        Returns:
+            dict: {'status': str, 'tracking_number': str, 'tracking_url': str}
+        """
+        _logger.info("Getting order status from Gelato: %s", order_id)
+
+        success, response_data, status_code, error_message = self._make_request(
+            endpoint=f'orders/{order_id}',
+            method='GET'
+        )
+
+        if success:
+            status = response_data.get('status', 'pending')
+            tracking_number = ''
+            tracking_url = ''
+
+            # Extract tracking info
+            shipments = response_data.get('shipments', [])
+            if shipments:
+                tracking_number = shipments[0].get('trackingNumber', '')
+                tracking_url = shipments[0].get('trackingUrl', '')
+
+            return {
+                'status': status,
+                'tracking_number': tracking_number,
+                'tracking_url': tracking_url
+            }
+        else:
+            _logger.error("Failed to get order status from Gelato: %s", error_message)
+            return {'status': 'error', 'tracking_number': '', 'tracking_url': ''}

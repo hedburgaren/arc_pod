@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- POD Order Tree View -->
+    <record id="view_pod_order_tree" model="ir.ui.view">
+        <field name="name">pod.order.tree</field>
+        <field name="model">pod.order</field>
+        <field name="arch" type="xml">
+            <tree string="POD Orders">
+                <field name="name"/>
+                <field name="sale_order_id"/>
+                <field name="provider_id"/>
+                <field name="status" widget="badge" decoration-info="status == 'pending'" decoration-primary="status == 'sent'" decoration-warning="status == 'processing'" decoration-success="status in ['shipped', 'delivered']" decoration-danger="status == 'error'"/>
+                <field name="tracking_number"/>
+                <field name="sent_date"/>
+                <field name="last_status_update"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- POD Order Form View -->
+    <record id="view_pod_order_form" model="ir.ui.view">
+        <field name="name">pod.order.form</field>
+        <field name="model">pod.order</field>
+        <field name="arch" type="xml">
+            <form string="POD Order">
+                <header>
+                    <field name="status" widget="statusbar" statusbar_visible="pending,sent,processing,shipped,delivered"/>
+                    <button name="action_send_to_provider" string="Send" type="object" class="oe_highlight" invisible="status != 'pending'"/>
+                    <button name="action_update_status" string="Update Status" type="object" invisible="status in ['pending', 'error']"/>
+                    <button name="action_retry" string="Retry" type="object" class="oe_highlight" invisible="status != 'error'"/>
+                </header>
+                <sheet>
+                    <group name="order_info" string="Order Information">
+                        <group>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="provider_id" readonly="1"/>
+                            <field name="external_order_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="sent_date" readonly="1"/>
+                        </group>
+                    </group>
+                    <group name="tracking" string="Tracking">
+                        <group>
+                            <field name="status" readonly="1" widget="badge" decoration-info="status == 'pending'" decoration-primary="status == 'sent'" decoration-warning="status == 'processing'" decoration-success="status in ['shipped', 'delivered']" decoration-danger="status == 'error'"/>
+                            <field name="tracking_number" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="tracking_url" readonly="1" widget="url"/>
+                            <field name="last_status_update" readonly="1"/>
+                        </group>
+                    </group>
+                    <group name="error_details" string="Error Details" invisible="status != 'error'">
+                        <field name="error_message" readonly="1" nolabel="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Order Lines" name="order_lines">
+                            <field name="sale_order_id" invisible="1"/>
+                            <field name="provider_id" invisible="1"/>
+                            <group>
+                                <field name="sale_order_id" readonly="1">
+                                    <tree>
+                                        <field name="order_line" invisible="1"/>
+                                    </tree>
+                                </field>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- POD Order Search View -->
+    <record id="view_pod_order_search" model="ir.ui.view">
+        <field name="name">pod.order.search</field>
+        <field name="model">pod.order</field>
+        <field name="arch" type="xml">
+            <search string="POD Orders">
+                <field name="name" string="POD Order" filter_domain="['|', ('name', 'ilike', self), ('external_order_id', 'ilike', self)]"/>
+                <field name="sale_order_id"/>
+                <field name="provider_id"/>
+                <field name="tracking_number"/>
+                <separator/>
+                <filter string="Pending" name="filter_pending" domain="[('status', '=', 'pending')]"/>
+                <filter string="Sent" name="filter_sent" domain="[('status', '=', 'sent')]"/>
+                <filter string="Processing" name="filter_processing" domain="[('status', '=', 'processing')]"/>
+                <filter string="Shipped" name="filter_shipped" domain="[('status', '=', 'shipped')]"/>
+                <filter string="Error" name="filter_error" domain="[('status', '=', 'error')]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter string="Provider" name="group_provider" context="{'group_by': 'provider_id'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                    <filter string="Sent Date" name="group_sent_date" context="{'group_by': 'sent_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- POD Order Action -->
+    <record id="action_pod_order" model="ir.actions.act_window">
+        <field name="name">POD Orders</field>
+        <field name="res_model">pod.order</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_filter_pending': 1, 'search_default_filter_error': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No POD orders found
+            </p>
+            <p>
+                POD orders are automatically created when you confirm sales orders with POD products.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_pod_order"
+              name="POD Orders"
+              parent="pod_config_views.menu_pod_settings"
+              action="action_pod_order"
+              sequence="40"/>
+</odoo>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit Sale Order Form View to Add Smart Button -->
+    <record id="view_order_form_inherit_pod" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.pod</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Add smart button in the button box -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_pod_orders"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-truck"
+                        invisible="pod_order_count == 0">
+                    <field name="pod_order_count" widget="statinfo" string="POD Orders"/>
+                </button>
+            </xpath>
+        </field>
+    </record>
+</odoo>
